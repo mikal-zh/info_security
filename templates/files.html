@@ -1,0 +1,232 @@
+{% extends "base.html" %}
+
+{% block title %}Encrypted File Vault{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+  <!-- Header Banner -->
+  <div class="rounded-2xl bg-slate-800/80 border border-slate-700/80 p-6 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div>
+      <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-sky-500/10 border border-sky-500/20 text-sky-400 text-xs font-semibold mb-2">
+        <i class="fa-solid fa-lock text-xs mr-1"></i>
+        <span>Zero-Plaintext Storage on Server Disk</span>
+      </div>
+      <h1 class="text-2xl font-bold text-white tracking-tight">Encrypted File Vault</h1>
+      <p class="text-xs text-slate-400 mt-1 max-w-2xl">
+        All files stored below exist on disk strictly as encrypted ciphertext payloads with cryptographically random IVs prepended.
+      </p>
+    </div>
+
+    <div class="flex items-center space-x-3">
+      <a href="{{ url_for('upload_file') }}"
+         class="inline-flex items-center px-4 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white text-xs font-semibold shadow-lg shadow-sky-500/20 transition-all">
+        <i class="fa-solid fa-cloud-arrow-up mr-2"></i> Encrypt & Upload File
+      </a>
+    </div>
+  </div>
+
+  <!-- Filter Tabs -->
+  <div class="flex items-center space-x-2 border-b border-slate-700/80 pb-3">
+    <a href="{{ url_for('files_vault') }}"
+       class="px-3.5 py-2 rounded-lg text-xs font-semibold transition-colors {{ 'bg-sky-500 text-white shadow-md' if not current_category else 'bg-slate-800 text-slate-300 hover:bg-slate-750' }}">
+      <i class="fa-solid fa-border-all mr-1.5"></i> All Files
+    </a>
+    <a href="{{ url_for('files_vault', category='id_card') }}"
+       class="px-3.5 py-2 rounded-lg text-xs font-semibold transition-colors {{ 'bg-sky-500 text-white shadow-md' if current_category == 'id_card' else 'bg-slate-800 text-slate-300 hover:bg-slate-750' }}">
+      <i class="fa-solid fa-id-card mr-1.5"></i> ID Cards
+    </a>
+    <a href="{{ url_for('files_vault', category='document') }}"
+       class="px-3.5 py-2 rounded-lg text-xs font-semibold transition-colors {{ 'bg-sky-500 text-white shadow-md' if current_category == 'document' else 'bg-slate-800 text-slate-300 hover:bg-slate-750' }}">
+      <i class="fa-solid fa-file-pdf mr-1.5"></i> Documents (PDF/DOC/XLS)
+    </a>
+    <a href="{{ url_for('files_vault', category='video') }}"
+       class="px-3.5 py-2 rounded-lg text-xs font-semibold transition-colors {{ 'bg-sky-500 text-white shadow-md' if current_category == 'video' else 'bg-slate-800 text-slate-300 hover:bg-slate-750' }}">
+      <i class="fa-solid fa-video mr-1.5"></i> Videos
+    </a>
+  </div>
+
+  <!-- Files Table Card -->
+  <div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl shadow-xl overflow-hidden">
+    {% if files %}
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse text-sm">
+        <thead>
+          <tr class="bg-slate-850 border-b border-slate-700/80 text-xs font-semibold uppercase text-slate-400">
+            <th class="py-3.5 px-4">File Name</th>
+            <th class="py-3.5 px-4">Category</th>
+            <th class="py-3.5 px-4">Cipher Algorithm</th>
+            <th class="py-3.5 px-4">Original Size</th>
+            <th class="py-3.5 px-4">Encrypted Size</th>
+            <th class="py-3.5 px-4">Overhead</th>
+            <th class="py-3.5 px-4">Entropy</th>
+            <th class="py-3.5 px-4">Enc. Time</th>
+            <th class="py-3.5 px-4 text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-700/50">
+          {% for f in files %}
+          <tr class="hover:bg-slate-750/50 transition-colors">
+            
+            <!-- Filename & Icon -->
+            <td class="py-3.5 px-4 font-medium text-slate-200">
+              <div class="flex items-center space-x-3">
+                <div class="w-9 h-9 rounded-xl flex items-center justify-center text-sm
+                  {% if f.category == 'id_card' %}bg-sky-500/10 text-sky-400 border border-sky-500/20
+                  {% elif f.category == 'video' %}bg-purple-500/10 text-purple-400 border border-purple-500/20
+                  {% else %}bg-amber-500/10 text-amber-400 border border-amber-500/20{% endif %}">
+                  {% if f.category == 'id_card' %}
+                    <i class="fa-solid fa-id-badge"></i>
+                  {% elif f.category == 'video' %}
+                    <i class="fa-solid fa-film"></i>
+                  {% else %}
+                    <i class="fa-solid fa-file-lines"></i>
+                  {% endif %}
+                </div>
+                <div>
+                  <div class="font-semibold text-white truncate max-w-xs" title="{{ f.original_filename }}">
+                    {{ f.original_filename }}
+                  </div>
+                  <div class="text-[11px] text-slate-400 font-mono">
+                    {{ f.file_type }}
+                  </div>
+                </div>
+              </div>
+            </td>
+
+            <!-- Category -->
+            <td class="py-3.5 px-4 text-xs">
+              <span class="capitalize px-2.5 py-1 rounded-full bg-slate-700/70 text-slate-300 font-medium">
+                {{ f.category.replace('_', ' ') }}
+              </span>
+            </td>
+
+            <!-- Cipher -->
+            <td class="py-3.5 px-4">
+              {% if f.cipher_algorithm == 'AES' %}
+                <span class="px-2.5 py-1 rounded-md text-xs font-bold bg-sky-500/20 text-sky-300 border border-sky-500/30">
+                  AES-256 (CBC)
+                </span>
+              {% elif f.cipher_algorithm == 'DES' %}
+                <span class="px-2.5 py-1 rounded-md text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                  DES (CBC)
+                </span>
+              {% else %}
+                <span class="px-2.5 py-1 rounded-md text-xs font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                  RC4 (Stream)
+                </span>
+              {% endif %}
+            </td>
+
+            <!-- Original Size -->
+            <td class="py-3.5 px-4 text-xs text-slate-300 font-mono">
+              {% if f.original_size >= 1048576 %}
+                {{ (f.original_size / 1048576)|round(2) }} MB
+              {% else %}
+                {{ (f.original_size / 1024)|round(1) }} KB
+              {% endif %}
+            </td>
+
+            <!-- Encrypted Size -->
+            <td class="py-3.5 px-4 text-xs text-slate-300 font-mono">
+              {% if f.encrypted_size >= 1048576 %}
+                {{ (f.encrypted_size / 1048576)|round(2) }} MB
+              {% else %}
+                {{ (f.encrypted_size / 1024)|round(1) }} KB
+              {% endif %}
+            </td>
+
+            <!-- Overhead -->
+            <td class="py-3.5 px-4 text-xs font-mono">
+              {% set diff = f.encrypted_size - f.original_size %}
+              {% if diff > 0 %}
+                <span class="text-sky-400 font-semibold">+{{ diff }} B</span>
+              {% elif diff == 0 %}
+                <span class="text-slate-500">0 B</span>
+              {% else %}
+                <span class="text-emerald-400">{{ diff }} B</span>
+              {% endif %}
+            </td>
+
+            <!-- Entropy -->
+            <td class="py-3.5 px-4 text-xs font-mono">
+              <span class="text-emerald-400 font-medium">{{ f.entropy }}</span>
+              <span class="text-[10px] text-slate-500">/8.0</span>
+            </td>
+
+            <!-- Encryption Time -->
+            <td class="py-3.5 px-4 text-xs text-slate-300 font-mono">
+              {{ f.encryption_time_ms }} ms
+            </td>
+
+            <!-- Actions -->
+            <td class="py-3.5 px-4 text-right space-x-1.5">
+              <!-- Decrypt & Download -->
+              <a href="{{ url_for('download_file', file_id=f.id) }}"
+                 class="inline-flex items-center px-2.5 py-1.5 rounded-lg bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 text-xs font-semibold border border-sky-500/30 transition-colors"
+                 title="Decrypt and Download">
+                <i class="fa-solid fa-lock-open mr-1"></i> Decrypt
+              </a>
+
+              <!-- Preview -->
+              <a href="{{ url_for('preview_file', file_id=f.id) }}" target="_blank"
+                 class="inline-flex items-center px-2.5 py-1.5 rounded-lg bg-slate-700/70 hover:bg-slate-700 text-slate-300 text-xs font-medium transition-colors"
+                 title="Preview Decrypted in Browser">
+                <i class="fa-solid fa-eye"></i>
+              </a>
+
+              <!-- Raw Ciphertext Blob -->
+              <a href="{{ url_for('download_raw_encrypted', file_id=f.id) }}"
+                 class="inline-flex items-center px-2.5 py-1.5 rounded-lg bg-slate-700/40 hover:bg-slate-700 text-slate-400 text-xs font-medium transition-colors"
+                 title="Download Raw Encrypted File on Disk">
+                <i class="fa-solid fa-file-shield"></i>
+              </a>
+
+              <!-- Benchmark Button -->
+              <button onclick="runBenchmarkOnFile({{ f.id }}, '{{ f.original_filename }}')"
+                      class="inline-flex items-center px-2.5 py-1.5 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 text-xs font-medium border border-indigo-500/30 transition-colors"
+                      title="Run Multi-Cipher Download Benchmark">
+                <i class="fa-solid fa-chart-line"></i>
+              </button>
+
+              <!-- Delete -->
+              <form action="{{ url_for('delete_file', file_id=f.id) }}" method="POST" class="inline" onsubmit="return confirm('Permanently delete this encrypted file?');">
+                <button type="submit" class="inline-flex items-center px-2.5 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 text-xs font-medium border border-rose-500/30 transition-colors" title="Delete File">
+                  <i class="fa-solid fa-trash-can"></i>
+                </button>
+              </form>
+            </td>
+
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="text-center py-16 px-4">
+      <div class="w-14 h-14 mx-auto rounded-2xl bg-slate-800 flex items-center justify-center text-slate-500 mb-3 border border-slate-700">
+        <i class="fa-solid fa-folder-open text-2xl"></i>
+      </div>
+      <h3 class="text-base font-bold text-white">No files found in this category</h3>
+      <p class="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
+        Upload ID card images, PDF/Word/Excel documents, or video files to store them securely.
+      </p>
+      <div class="mt-4">
+        <a href="{{ url_for('upload_file') }}" class="inline-flex items-center px-4 py-2.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-white text-xs font-semibold shadow-lg shadow-sky-500/20">
+          <i class="fa-solid fa-cloud-arrow-up mr-2"></i> Encrypt & Upload Now
+        </a>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+
+<!-- Script to quickly redirect to benchmark page with this file selected -->
+<script>
+  function runBenchmarkOnFile(fileId, filename) {
+    window.location.href = "{{ url_for('benchmark') }}?file_id=" + fileId;
+  }
+</script>
+{% endblock %}
+
