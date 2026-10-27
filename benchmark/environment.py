@@ -34,8 +34,10 @@ def _cpu_info() -> tuple[str, bool]:
 def _power_state() -> str:
     """'mains', 'battery' or 'unknown' (laptops throttle on battery)."""
     supplies = Path("/sys/class/power_supply").glob("A*/online")
-    states = [path.read_text().strip() for path in supplies]
-    return POWER_STATES.get(states[0], "unknown") if states else "unknown"
+    for supply in supplies:
+        state = supply.read_text().strip()
+        return POWER_STATES.get(state, "unknown")
+    return "unknown"
 
 
 def environment() -> dict:

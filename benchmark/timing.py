@@ -33,7 +33,10 @@ def time_ns(func, repeats: int, warmup: int) -> list[int]:
 
 def summarise(samples_ns: list[int]) -> dict:
     """Median, first and third quartile in milliseconds, and the count."""
-    millis = sorted(sample / 1e6 for sample in samples_ns)
+    millis = []
+    for sample in samples_ns:
+        millis.append(sample / 1e6)
+    millis.sort()
     median = statistics.median(millis)
     if len(millis) >= 4:
         first, _, third = statistics.quantiles(millis, n=4)

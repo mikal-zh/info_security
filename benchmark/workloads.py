@@ -28,4 +28,6 @@ def repeats_for(total_bytes: int, quick: bool) -> int:
     """Timed runs per measurement: fewer for large items or a quick run."""
     if quick:
         return 5
-    return 15 if total_bytes >= 10 * MB else 51
+    if total_bytes >= 10 * MB:
+        return 15
+    return 51

@@ -34,31 +34,50 @@ def save_results(results: dict) -> Path:
     return RESULTS_DIR
 
 
-def _find(rows: list[dict], **criteria) -> dict:
-    """The first row whose fields match all the given values."""
-    return next(row for row in rows
-                if all(row[key] == value for key, value in criteria.items()))
+def _matches(row: dict, criteria: dict) -> bool:
+    """True when the row has every field value given in `criteria`."""
+    for key, value in criteria.items():
+        if row[key] != value:
+            return False
+    return True
+
+
+def _find(rows: list[dict], criteria: dict) -> dict:
+    """The first row matching `criteria`."""
+    for row in rows:
+        if _matches(row, criteria):
+            return row
+    raise KeyError(f"no result row for {criteria}")
+
+
+def _header(title: str, column_width: int) -> str:
+    """Table header: the title, then one right-aligned column per cipher."""
+    line = title
+    for cipher in CIPHERS:
+        line += " " + cipher.rjust(column_width)
+    return line
 
 
 def print_ciphers(rows: list[dict]) -> None:
     """Median time and throughput per workload, operation and cipher."""
-    print(f"\n{'workload':24s} {'op':8s} "
-          + " ".join(f"{cipher:>18s}" for cipher in CIPHERS))
+    print("\n" + _header(f"{'workload':24s} {'op':8s}", 18))
     for name, _, _ in WORKLOADS:
         for op in OPERATIONS:
-            cells = [_find(rows, workload=name, cipher=cipher, op=op)
-                     for cipher in CIPHERS]
-            print(f"{name:24s} {op:8s} " + " ".join(
-                f"{row['median_ms']:9.3f} ms {row['throughput_MBps']:5.0f}"
-                "MB/s" for row in cells))
+            line = f"{name:24s} {op:8s}"
+            for cipher in CIPHERS:
+                criteria = {"workload": name, "cipher": cipher, "op": op}
+                row = _find(rows, criteria)
+                line += (f" {row['median_ms']:9.3f} ms "
+                         f"{row['throughput_MBps']:5.0f}MB/s")
+            print(line)
 
 
 def print_downloads(rows: list[dict]) -> None:
     """Median end-to-end download time per file workload and cipher."""
-    print(f"\n{'download (end-to-end)':24s} "
-          + " ".join(f"{cipher:>12s}" for cipher in CIPHERS))
+    print("\n" + _header(f"{'download (end-to-end)':24s}", 12))
     for name, _, _ in FILE_WORKLOADS:
-        cells = [_find(rows, workload=name, cipher=cipher)["median_ms"]
-                 for cipher in CIPHERS]
-        print(f"{name:24s} "
-              + " ".join(f"{median:9.2f} ms" for median in cells))
+        line = f"{name:24s}"
+        for cipher in CIPHERS:
+            row = _find(rows, {"workload": name, "cipher": cipher})
+            line += f" {row['median_ms']:9.2f} ms"
+        print(line)
