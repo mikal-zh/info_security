@@ -58,3 +58,22 @@ def test_wrong_extension_is_rejected(app, client):
     resp = upload(client, b"x", "virus.exe", "office")
     assert resp.status_code == 302
     assert blob_suffixes(app) == []
+
+
+def test_other_employee_cannot_verify_document(app, client):
+    """Verifying someone else's document gives a 404 and no detail."""
+    upload(client, b"private", "ktp.png")
+    other = app.test_client()
+    register_and_login(other, "emp-002")
+    resp = post_form(other, "/documents/1/verify", {})
+    assert resp.status_code == 404
+    assert b"copy is intact" not in resp.data
+
+
+def test_empty_file_is_rejected(app, client):
+    """An empty upload is refused and nothing is written to disk."""
+    resp = upload(client, b"", "empty.pdf", "office")
+    assert resp.status_code == 302
+    assert blob_suffixes(app) == []
+    page = client.get("/documents").get_data(as_text=True)
+    assert "That file is empty" in page
