@@ -5,7 +5,8 @@
 
 """Account tests: password change and erasure."""
 
-from tests.helpers import NIK, PASSWORD, post_form, table_counts, upload
+from tests.helpers import (NIK, PASSWORD, blob_suffixes, post_form,
+                           table_counts, upload)
 
 NEW_PASSWORD = "new-password-123"
 
@@ -28,4 +29,4 @@ def test_erasure_removes_everything(app, client):
     post_form(client, "/personal-data", {"nik": NIK})
     post_form(client, "/account/erase", {"password": PASSWORD})
     assert table_counts(app) == [0, 0, 0]
-    assert list(app.config["BLOB_DIR"].iterdir()) == []
+    assert blob_suffixes(app) == []

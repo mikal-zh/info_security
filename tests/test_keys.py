@@ -15,11 +15,15 @@ from hrvault.crypto import CIPHERS, IntegrityError, VaultKeys, keys
 def test_subkeys_are_independent():
     """Every encryption and MAC key differs, with the right key sizes."""
     vault = VaultKeys.generate()
-    pairs = [vault.cipher_keys(cipher) for cipher in CIPHERS]
-    enc_keys = [pair.enc_key for pair in pairs]
-    derived = enc_keys + [pair.mac_key for pair in pairs]
-    assert len({key[:8] for key in derived}) == len(derived)
-    assert [len(key) for key in enc_keys] == [32, 8, 16]
+    enc_key_sizes = []
+    prefixes = set()
+    for cipher in CIPHERS:
+        pair = vault.cipher_keys(cipher)
+        enc_key_sizes.append(len(pair.enc_key))
+        prefixes.add(pair.enc_key[:8])
+        prefixes.add(pair.mac_key[:8])
+    assert len(prefixes) == 2 * len(CIPHERS)
+    assert enc_key_sizes == [32, 8, 16]
 
 
 def test_vault_key_unwraps_with_right_password():

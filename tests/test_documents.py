@@ -9,7 +9,8 @@ import os
 
 import pytest
 
-from tests.helpers import post_form, register_and_login, stored_bytes, upload
+from tests.helpers import (blob_suffixes, flip_byte, post_form,
+                           register_and_login, stored_bytes, upload)
 
 
 @pytest.mark.parametrize("cipher", ["AES", "DES", "RC4"])
@@ -25,8 +26,7 @@ def test_document_comes_back_bit_exact_from_every_copy(client, cipher):
 def test_three_copies_on_disk_and_filename_not_leaked(app, client):
     """Three files with random names; neither content nor name in clear."""
     upload(client, b"KTP scan bytes " * 1000, "ktp_aditya_pratama.png")
-    suffixes = sorted(path.suffix for path in app.config["BLOB_DIR"].iterdir())
-    assert suffixes == [".aes", ".des", ".rc4"]
+    assert blob_suffixes(app) == [".aes", ".des", ".rc4"]
     assert b"aditya" not in stored_bytes(app)
     assert b"KTP scan" not in stored_bytes(app)
 
@@ -34,11 +34,7 @@ def test_three_copies_on_disk_and_filename_not_leaked(app, client):
 def test_tampered_copy_is_not_released(app, client):
     """A modified DES copy is refused while the AES copy still works."""
     upload(client, b"interview video" * 5000, "interview.mp4", "video")
-    blob = next(path for path in app.config["BLOB_DIR"].iterdir()
-                if path.suffix == ".des")
-    raw = bytearray(blob.read_bytes())
-    raw[100] ^= 0xFF
-    blob.write_bytes(bytes(raw))
+    flip_byte(app, ".des", 100)
     resp = client.get("/documents/1/download?cipher=DES",
                       follow_redirects=True)
     assert b"has been altered since you uploaded it" in resp.data
@@ -61,4 +57,4 @@ def test_wrong_extension_is_rejected(app, client):
     """A file type that does not match its category is not stored."""
     resp = upload(client, b"x", "virus.exe", "office")
     assert resp.status_code == 302
-    assert list(app.config["BLOB_DIR"].iterdir()) == []
+    assert blob_suffixes(app) == []

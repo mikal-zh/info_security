@@ -49,13 +49,40 @@ def stored_bytes(app) -> bytes:
     rows = conn.execute(
         "SELECT aes, des, rc4 FROM personal_data UNION ALL "
         "SELECT meta_aes, meta_des, meta_rc4 FROM documents").fetchall()
-    blobs = [path.read_bytes() for path in app.config["BLOB_DIR"].iterdir()]
-    return b"".join(value for row in rows for value in row) + b"".join(blobs)
+    stored = b""
+    for row in rows:
+        for value in row:
+            stored += value
+    for path in app.config["BLOB_DIR"].iterdir():
+        stored += path.read_bytes()
+    return stored
 
 
 def table_counts(app) -> list[int]:
     """Number of rows in the users, personal_data and documents tables."""
     conn = sqlite3.connect(app.config["DB_PATH"])
-    tables = ("users", "personal_data", "documents")
-    return [conn.execute(f"SELECT COUNT(*) FROM {name}").fetchone()[0]
-            for name in tables]
+    counts = []
+    for name in ("users", "personal_data", "documents"):
+        query = f"SELECT COUNT(*) FROM {name}"
+        counts.append(conn.execute(query).fetchone()[0])
+    return counts
+
+
+def blob_suffixes(app) -> list[str]:
+    """Sorted extensions of the encrypted files on disk."""
+    suffixes = []
+    for path in app.config["BLOB_DIR"].iterdir():
+        suffixes.append(path.suffix)
+    suffixes.sort()
+    return suffixes
+
+
+def flip_byte(app, suffix: str, position: int) -> None:
+    """Corrupt one byte of the first encrypted file with this extension."""
+    for path in app.config["BLOB_DIR"].iterdir():
+        if path.suffix == suffix:
+            raw = bytearray(path.read_bytes())
+            raw[position] ^= 0xFF
+            path.write_bytes(bytes(raw))
+            return
+    raise FileNotFoundError(f"no {suffix} file")

@@ -25,4 +25,6 @@ def test_nothing_in_clear_and_three_distinct_copies(app, client):
     assert NIK.encode() not in stored and b"Islam" not in stored
     rows = sqlite3.connect(app.config["DB_PATH"]).execute(
         "SELECT aes, des, rc4 FROM personal_data").fetchall()
-    assert len(rows) == 2 and all(len(set(row)) == 3 for row in rows)
+    assert len(rows) == 2
+    for row in rows:
+        assert len(set(row)) == 3
