@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+{% set counts = {} %}
+{% for d in docs %}{% set _ = counts.update({d.category: counts.get(d.category, 0) + 1}) %}{% endfor %}
+<div class="space-y-6">
+
+  <div class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-800 to-slate-900 border border-slate-700/80 p-6 shadow-xl">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div>
+        <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-sky-500/10 border border-sky-500/20 text-sky-400 text-xs font-semibold mb-2">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span>Your vault is open · it locks again when you log out</span>
+        </div>
+        <h1 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+          Hi, <span class="bg-gradient-to-r from-sky-400 to-indigo-300 bg-clip-text text-transparent">{{ g.username }}</span>
+        </h1>
+        <p class="text-sm text-slate-400 mt-1 max-w-2xl">A few details and a few scans, and you're done. We need them to finalise your contract, pay you on time and get your BPJS cover started. Everything you add is locked three times, with <strong>AES-256</strong>, <strong>DES</strong> and <strong>RC4</strong>, and sealed so we'd notice if anyone touched it.</p>
+      </div>
+      <div class="flex items-center space-x-3">
+        <a href="{{ url_for('web.documents') }}#upload" class="inline-flex items-center px-4 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white text-sm font-semibold shadow-lg shadow-sky-500/20 transition-all">
+          <i class="fa-solid fa-cloud-arrow-up mr-2"></i> Encrypt & Upload
+        </a>
+        <a href="{{ url_for('web.personal_data') }}" class="inline-flex items-center px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-sm font-semibold transition-all">
+          <i class="fa-solid fa-id-card-clip mr-2 text-sky-400"></i> Personal Data
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    {% set cards = [
+      ('Personal Data', 'fa-id-card-clip', 'indigo', fields_done ~ ' / ' ~ fields_total, 'details filled in', url_for('web.personal_data'), 'Update my details'),
+      ('ID Scans', 'fa-image', 'sky', counts.get('id_scan', 0), 'KTP, NPWP card, passport', url_for('web.documents'), 'See my documents'),
+      ('Office Documents', 'fa-file-lines', 'amber', counts.get('office', 0), 'Contract, CV, diploma, payslip', url_for('web.documents'), 'See my documents'),
+      ('Videos', 'fa-video', 'purple', counts.get('video', 0), 'Interview, safety induction', url_for('web.documents'), 'See my documents'),
+    ] %}
+    {% for title, icon, colour, value, sub, link, link_label in cards %}
+    <div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-5 shadow-lg flex flex-col justify-between">
+      <div class="flex items-center justify-between">
+        <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">{{ title }}</span>
+        <div class="w-9 h-9 rounded-xl bg-{{ colour }}-500/10 border border-{{ colour }}-500/20 flex items-center justify-center text-{{ colour }}-400">
+          <i class="fa-solid {{ icon }} text-sm"></i>
+        </div>
+      </div>
+      <div class="mt-4">
+        <div class="text-2xl font-bold text-white">{{ value }}</div>
+        <p class="text-xs text-slate-400 mt-1">{{ sub }}</p>
+      </div>
+      <div class="mt-4 pt-3 border-t border-slate-700/60">
+        <a href="{{ link }}" class="text-xs font-medium text-sky-400 hover:text-sky-300 flex items-center">{{ link_label }} <i class="fa-solid fa-arrow-right ml-1.5 text-[10px]"></i></a>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% if missing %}
+  <div class="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-sm flex items-center gap-3">
+    <i class="fa-solid fa-list-check"></i>
+    <span>Almost there! We still need: <strong>{{ missing|map(attribute='label')|join(', ') }}</strong></span>
+  </div>
+  {% endif %}
+
+  <div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-6 shadow-xl">
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <h2 class="text-lg font-bold text-white tracking-tight">Your latest uploads</h2>
+        <p class="text-xs text-slate-400">On our servers they're just three scrambled files with random names. Only you can turn them back into documents.</p>
+      </div>
+      <a href="{{ url_for('web.documents') }}" class="text-xs font-semibold text-sky-400 hover:text-sky-300">All my documents <i class="fa-solid fa-arrow-right ml-1 text-[10px]"></i></a>
+    </div>
+    {% if docs %}
+    <table class="w-full text-left text-sm">
+      <thead><tr class="border-b border-slate-700/80 text-xs font-semibold uppercase text-slate-400"><th class="py-3 px-4">File</th><th class="py-3 px-4">Type</th><th class="py-3 px-4">Size</th><th class="py-3 px-4">Uploaded</th></tr></thead>
+      <tbody>
+        {% for d in docs[:5] %}
+        <tr class="border-b border-slate-700/40">
+          <td class="py-3 px-4 font-medium text-white">{{ d.filename }}</td>
+          <td class="py-3 px-4 text-slate-300">{{ d.category|replace('id_scan', 'ID scan')|replace('office', 'Office')|replace('video', 'Video') }}</td>
+          <td class="py-3 px-4 text-slate-300 font-mono text-xs">{{ '{:,.0f}'.format(d.size / 1024) }} KB</td>
+          <td class="py-3 px-4 text-slate-400 text-xs">{{ d.created_at }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="text-center py-10 text-slate-500"><i class="fa-solid fa-folder-open text-3xl mb-2"></i><p class="text-sm">Nothing here yet. Your KTP scan is a good place to start.</p></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
