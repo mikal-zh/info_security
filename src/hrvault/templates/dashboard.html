@@ -18,7 +18,7 @@
         <p class="text-sm text-slate-400 mt-1 max-w-2xl">A few details and a few scans, and you're done. We need them to finalise your contract, pay you on time and get your BPJS cover started. Everything you add is locked three times, with <strong>AES-256</strong>, <strong>DES</strong> and <strong>RC4</strong>, and sealed so we'd notice if anyone touched it.</p>
       </div>
       <div class="flex items-center space-x-3">
-        <a href="{{ url_for('web.documents') }}#upload" class="inline-flex items-center px-4 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white text-sm font-semibold shadow-lg shadow-sky-500/20 transition-all">
+        <a href="{{ url_for('web.documents_page') }}#upload" class="inline-flex items-center px-4 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white text-sm font-semibold shadow-lg shadow-sky-500/20 transition-all">
           <i class="fa-solid fa-cloud-arrow-up mr-2"></i> Encrypt & Upload
         </a>
         <a href="{{ url_for('web.personal_data') }}" class="inline-flex items-center px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-sm font-semibold transition-all">
@@ -31,9 +31,9 @@
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
     {% set cards = [
       ('Personal Data', 'fa-id-card-clip', 'indigo', fields_done ~ ' / ' ~ fields_total, 'details filled in', url_for('web.personal_data'), 'Update my details'),
-      ('ID Scans', 'fa-image', 'sky', counts.get('id_scan', 0), 'KTP, NPWP card, passport', url_for('web.documents'), 'See my documents'),
-      ('Office Documents', 'fa-file-lines', 'amber', counts.get('office', 0), 'Contract, CV, diploma, payslip', url_for('web.documents'), 'See my documents'),
-      ('Videos', 'fa-video', 'purple', counts.get('video', 0), 'Interview, safety induction', url_for('web.documents'), 'See my documents'),
+      ('ID Scans', 'fa-image', 'sky', counts.get('id_scan', 0), 'KTP, NPWP card, passport', url_for('web.documents_page'), 'See my documents'),
+      ('Office Documents', 'fa-file-lines', 'amber', counts.get('office', 0), 'Contract, CV, diploma, payslip', url_for('web.documents_page'), 'See my documents'),
+      ('Videos', 'fa-video', 'purple', counts.get('video', 0), 'Interview, safety induction', url_for('web.documents_page'), 'See my documents'),
     ] %}
     {% for title, icon, colour, value, sub, link, link_label in cards %}
     <div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-5 shadow-lg flex flex-col justify-between">
@@ -67,7 +67,7 @@
         <h2 class="text-lg font-bold text-white tracking-tight">Your latest uploads</h2>
         <p class="text-xs text-slate-400">On our servers they're just three scrambled files with random names. Only you can turn them back into documents.</p>
       </div>
-      <a href="{{ url_for('web.documents') }}" class="text-xs font-semibold text-sky-400 hover:text-sky-300">All my documents <i class="fa-solid fa-arrow-right ml-1 text-[10px]"></i></a>
+      <a href="{{ url_for('web.documents_page') }}" class="text-xs font-semibold text-sky-400 hover:text-sky-300">All my documents <i class="fa-solid fa-arrow-right ml-1 text-[10px]"></i></a>
     </div>
     {% if docs %}
     <table class="w-full text-left text-sm">

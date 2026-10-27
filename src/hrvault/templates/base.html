@@ -29,7 +29,7 @@
 
         {% if g.user_id %}
         <div class="hidden md:flex items-center space-x-1 lg:space-x-2">
-          {% for endpoint, icon, label in [('web.dashboard', 'fa-gauge-high', 'Dashboard'), ('web.personal_data', 'fa-id-card-clip', 'Personal Data'), ('web.documents', 'fa-folder-closed', 'Documents'), ('web.account', 'fa-user-gear', 'Account')] %}
+          {% for endpoint, icon, label in [('web.dashboard', 'fa-gauge-high', 'Dashboard'), ('web.personal_data', 'fa-id-card-clip', 'Personal Data'), ('web.documents_page', 'fa-folder-closed', 'Documents'), ('web.account', 'fa-user-gear', 'Account')] %}
           <a href="{{ url_for(endpoint) }}" class="px-3 py-2 rounded-lg text-sm font-medium transition-colors hover:bg-slate-700/60 {{ 'bg-slate-700/80 text-sky-400 font-semibold' if request.endpoint == endpoint else 'text-slate-300' }}">
             <i class="fa-solid {{ icon }} mr-1.5 text-xs"></i> {{ label }}
           </a>
@@ -37,7 +37,7 @@
         </div>
 
         <div class="flex items-center space-x-3">
-          <a href="{{ url_for('web.documents') }}#upload" class="hidden md:flex bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white text-xs font-semibold px-3.5 py-2 rounded-lg shadow-md shadow-sky-500/20 transition-all items-center space-x-1.5">
+          <a href="{{ url_for('web.documents_page') }}#upload" class="hidden md:flex bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white text-xs font-semibold px-3.5 py-2 rounded-lg shadow-md shadow-sky-500/20 transition-all items-center space-x-1.5">
             <i class="fa-solid fa-plus"></i><span>Encrypt & Upload</span>
           </a>
           <div class="flex items-center pl-2 border-l border-slate-700 space-x-2">
