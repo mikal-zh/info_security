@@ -75,8 +75,9 @@ def ktp_scan() -> bytes:
 
 def contract_docx() -> bytes:
     """A minimal valid Word document, built without extra dependencies."""
-    body = "".join(f"<w:p><w:r><w:t>{line}</w:t></w:r></w:p>"
-                   for line in CONTRACT_LINES)
+    body = ""
+    for line in CONTRACT_LINES:
+        body += f"<w:p><w:r><w:t>{line}</w:t></w:r></w:p>"
     document = (f'{XML_HEAD}<w:document xmlns:w="{WORD_NS}">'
                 f"<w:body>{body}</w:body></w:document>")
     buffer = io.BytesIO()
