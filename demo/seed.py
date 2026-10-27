@@ -5,7 +5,7 @@
 
 """Create a demo employee with realistic onboarding data.
 
-    python scripts/seed_demo.py
+    python demo/seed.py
 
 Login: emp-0001 / onboarding-2026. All data is fictitious.
 """
@@ -15,7 +15,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-import demo_files  # noqa: E402
+import fake_documents  # noqa: E402
 
 from hrvault import accounts, create_app, db, documents, personal  # noqa
 from hrvault.owner import Owner  # noqa: E402
@@ -49,11 +49,11 @@ def demo_uploads() -> list[documents.Upload]:
     """The KTP scan, the contract and, if ffmpeg exists, the video."""
     uploads = [
         documents.Upload("id_scan", "ktp_scan.png", "image/png",
-                         demo_files.ktp_scan()),
+                         fake_documents.ktp_scan()),
         documents.Upload("office", "employment_contract.docx", DOCX_MIME,
-                         demo_files.contract_docx()),
+                         fake_documents.contract_docx()),
     ]
-    video = demo_files.interview_video()
+    video = fake_documents.interview_video()
     if video:
         uploads.append(documents.Upload("video", "interview_recording.mp4",
                                         "video/mp4", video))

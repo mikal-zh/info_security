@@ -22,7 +22,7 @@ The report is in [docs/REPORT.pdf](docs/REPORT.pdf)
 
 ```bash
 pip install -r requirements.txt
-python scripts/seed_demo.py   # optional: demo employee emp-0001
+python demo/seed.py           # optional: demo employee emp-0001
 python run.py                 # http://127.0.0.1:5000
 ```
 
@@ -84,7 +84,8 @@ src/hrvault/
   web/                    Flask views: hooks, auth, personal, documents,
                           account
   templates/              Jinja pages
-scripts/                  demo data generator and seed script
+demo/                     demo employee (seed.py) and its fake KTP scan,
+                          contract and video (fake_documents.py)
 benchmark/                benchmark modules and committed results
 tests/                    pytest suite
 docs/                     report (HTML source and PDF)
