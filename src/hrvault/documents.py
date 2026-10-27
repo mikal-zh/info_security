@@ -63,7 +63,9 @@ def store_document(owner: Owner, upload: Upload) -> str:
     for cipher in CIPHERS:
         sealed = owner.keys.seal(cipher, upload.data, blob_ctx)
         _blob_path(owner, doc_uuid, cipher).write_bytes(sealed)
-    metas = [owner.keys.seal(cipher, meta, meta_ctx) for cipher in CIPHERS]
+    metas = []
+    for cipher in CIPHERS:
+        metas.append(owner.keys.seal(cipher, meta, meta_ctx))
     owner.conn.execute(INSERT, (owner.user_id, doc_uuid, upload.category,
                                 *metas))
     owner.conn.commit()

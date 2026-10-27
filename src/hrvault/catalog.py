@@ -17,6 +17,14 @@ whether to encrypt.
 from dataclasses import dataclass
 
 
+def index_by_name(items: list) -> dict:
+    """Map each item's `name` attribute to the item itself."""
+    index = {}
+    for item in items:
+        index[item.name] = item
+    return index
+
+
 @dataclass(frozen=True)
 class Field:
     """One personal-data form field."""
@@ -64,7 +72,7 @@ FIELDS = [
           "Third party's data, UU PDP 4(3)f"),
 ]
 
-FIELDS_BY_NAME = {item.name: item for item in FIELDS}
+FIELDS_BY_NAME = index_by_name(FIELDS)
 MAX_FIELD_LENGTH = 2000
 
 
@@ -98,4 +106,4 @@ CATEGORIES = [
              "Face and voice identify the employee (UU PDP 4(3)f)"),
 ]
 
-CATEGORIES_BY_NAME = {item.name: item for item in CATEGORIES}
+CATEGORIES_BY_NAME = index_by_name(CATEGORIES)

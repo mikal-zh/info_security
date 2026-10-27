@@ -80,6 +80,8 @@ def open_(keys: CipherKeys, envelope: bytes, context: str) -> bytes:
 
 def overhead(cipher: str, plaintext_len: int) -> int:
     """Bytes added on top of the plaintext (header, nonce, padding, tag)."""
-    block = ciphers.BLOCK_SIZES.get(cipher)
-    padding = block - plaintext_len % block if block else 0
+    padding = 0
+    if cipher in ciphers.BLOCK_SIZES:
+        block = ciphers.BLOCK_SIZES[cipher]
+        padding = block - plaintext_len % block
     return HEADER_SIZE + ciphers.NONCE_SIZES[cipher] + padding + TAG_SIZE

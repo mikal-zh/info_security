@@ -21,7 +21,9 @@ def _form_credentials() -> accounts.Credentials:
 @bp.route("/")
 def index():
     """Send visitors to their dashboard, or to the login page."""
-    return redirect(url_for("web.dashboard" if g.user_id else "web.login"))
+    if g.user_id:
+        return redirect(url_for("web.dashboard"))
+    return redirect(url_for("web.login"))
 
 
 def _try_register() -> bool:

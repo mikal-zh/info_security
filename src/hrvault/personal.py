@@ -44,8 +44,10 @@ def _save_field(owner: Owner, name: str, value: str) -> None:
             (owner.user_id, name))
         return
     context = owner.context(f"field:{name}")
-    sealed = [owner.keys.seal(cipher, value.encode(), context)
-              for cipher in CIPHERS]
+    sealed = []
+    for cipher in CIPHERS:
+        envelope = owner.keys.seal(cipher, value.encode(), context)
+        sealed.append(envelope)
     owner.conn.execute(UPSERT, (owner.user_id, name, *sealed))
 
 
@@ -71,21 +73,37 @@ def _open_copies(owner: Owner, row) -> dict[str, str]:
     return plain
 
 
+def _shown_value(plain: dict[str, str]) -> str | None:
+    """The value to display: the AES copy, else any valid copy."""
+    if "AES" in plain:
+        return plain["AES"]
+    for value in plain.values():
+        return value
+    return None
+
+
 def _field_value(owner: Owner, row) -> FieldValue:
     """Build the FieldValue of one stored row."""
     plain = _open_copies(owner, row)
-    values = set(plain.values())
-    return FieldValue(
-        value=plain.get("AES") or next(iter(values), None),
-        copies={cipher: cipher in plain for cipher in CIPHERS},
-        consistent=len(values) == 1,
-        stored_bytes={cipher: len(row[cipher.lower()]) for cipher in CIPHERS},
-        preview={cipher: row[cipher.lower()][:20].hex() for cipher in CIPHERS},
-    )
+    copies = {}
+    stored_bytes = {}
+    preview = {}
+    for cipher in CIPHERS:
+        sealed = row[cipher.lower()]
+        copies[cipher] = cipher in plain
+        stored_bytes[cipher] = len(sealed)
+        preview[cipher] = sealed[:20].hex()
+    different_values = set(plain.values())
+    consistent = len(different_values) == 1
+    return FieldValue(_shown_value(plain), copies, consistent,
+                      stored_bytes, preview)
 
 
 def load_personal_data(owner: Owner) -> dict[str, FieldValue]:
     """Decrypt all of the owner's fields, keyed by field name."""
     rows = owner.conn.execute(
         "SELECT * FROM personal_data WHERE user_id = ?", (owner.user_id,))
-    return {row["field"]: _field_value(owner, row) for row in rows}
+    fields = {}
+    for row in rows:
+        fields[row["field"]] = _field_value(owner, row)
+    return fields

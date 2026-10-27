@@ -32,8 +32,9 @@ def _check(cipher: str) -> None:
 
 def _cbc(cipher: str, key: bytes, iv: bytes):
     """Return a fresh CBC-mode cipher object for AES or DES."""
-    module = AES if cipher == "AES" else DES
-    return module.new(key, module.MODE_CBC, iv=iv)
+    if cipher == "AES":
+        return AES.new(key, AES.MODE_CBC, iv=iv)
+    return DES.new(key, DES.MODE_CBC, iv=iv)
 
 
 def _rc4(key: bytes, nonce: bytes):

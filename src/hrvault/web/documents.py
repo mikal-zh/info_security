@@ -6,8 +6,6 @@
 """Document upload, download, verification and deletion views."""
 
 import io
-import mimetypes
-from pathlib import PurePath
 
 from flask import (abort, flash, redirect, render_template, request,
                    send_file, url_for)
@@ -16,6 +14,7 @@ from .. import documents
 from ..catalog import CATEGORIES, CATEGORIES_BY_NAME
 from ..crypto import CIPHERS, IntegrityError
 from .blueprint import bp, current_owner
+from .upload_form import read_upload
 
 
 @bp.get("/documents")
@@ -26,29 +25,10 @@ def documents_page():
                            categories=CATEGORIES, by_name=CATEGORIES_BY_NAME)
 
 
-def _read_upload():
-    """Return (Upload, None) for a valid form, or (None, error message)."""
-    file = request.files.get("file")
-    category = CATEGORIES_BY_NAME.get(request.form.get("category", ""))
-    filename = PurePath(file.filename or "").name[:200] if file else ""
-    if not filename:
-        return None, "Pick a file first."
-    if category is None:
-        return None, "Tell us what kind of document this is."
-    if PurePath(filename).suffix.lower() not in category.extensions:
-        return None, (f"We can only take a {category.label.lower()} as "
-                      f"{', '.join(category.extensions)}.")
-    data = file.read()
-    if not data:
-        return None, "That file is empty. Wrong one, maybe?"
-    mime = mimetypes.guess_type(filename)[0] or "application/octet-stream"
-    return documents.Upload(category.name, filename, mime, data), None
-
-
 @bp.post("/documents")
 def upload():
     """Store a valid upload as three encrypted copies."""
-    new_doc, error = _read_upload()
+    new_doc, error = read_upload()
     if error:
         flash(error, "danger")
     else:

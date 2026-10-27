@@ -39,8 +39,10 @@ class KeyStore:
         An unknown or idle-expired token returns None; an expired entry
         is removed at the same time.
         """
+        if not token:
+            return None
         with self._lock:
-            entry = self._entries.get(token) if token else None
+            entry = self._entries.get(token)
             if entry is None:
                 return None
             user_id, keys, last_seen = entry
@@ -59,7 +61,9 @@ class KeyStore:
     def close_user(self, user_id: int) -> None:
         """Forget every session of one user."""
         with self._lock:
-            tokens = [token for token, entry in self._entries.items()
-                      if entry[0] == user_id]
+            tokens = []
+            for token, entry in self._entries.items():
+                if entry[0] == user_id:
+                    tokens.append(token)
             for token in tokens:
                 del self._entries[token]

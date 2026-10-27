@@ -97,7 +97,9 @@ def login(conn: sqlite3.Connection, creds: Credentials, iterations: int):
         keys.derive_login_secrets(creds.password, DUMMY_SALT, iterations)
         return None
     vault_key = _unlock(row, creds.password)
-    return None if vault_key is None else (row["id"], VaultKeys(vault_key))
+    if vault_key is None:
+        return None
+    return row["id"], VaultKeys(vault_key)
 
 
 def change_password(conn: sqlite3.Connection, user_id: int,
