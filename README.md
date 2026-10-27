@@ -1,104 +1,70 @@
-# Information Security Assignment 1: Secure Cryptographic Vault
+# Onboarding Vault
 
-A production-grade, compliant web application for storing confidential personal data (aligned with **EU GDPR** & **Indonesian UU PDP No. 27/2022**) and encrypted file vaults (ID Cards, Documents, Videos) using **AES-256 (CBC)**, **DES (CBC)**, and **RC4 (Stream)**.
+Information Security, Assignment 1. A web application where new employees of a
+company store their onboarding file (personal data form, scanned KTP, contract
+and CV, recorded interview video) encrypted at rest. Every item is stored three
+times, sealed with **AES-256-CBC**, **DES-CBC** and **RC4-drop3072**, each copy
+authenticated with HMAC-SHA256. Only the logged-in employee can retrieve their
+own data, and a copy that fails its integrity check is never returned.
 
-Includes a comprehensive **Multi-Cipher Benchmark & Analysis Laboratory** and an in-browser academic **Report Viewer**.
+The report is in [docs/REPORT.pdf](docs/REPORT.pdf) (source: [docs/report.html](docs/report.html)).
 
----
+## Run it
 
-## 📁 Architecture & Structure du Projet
+```bash
+pip install -r requirements.txt
+python scripts/seed_demo.py      # optional: demo employee emp-0001 / onboarding-2026
+python run.py                    # http://127.0.0.1:5000
+```
 
-Le projet a été soigneusement structuré et rangé de manière modulaire :
+The seed script needs `ffmpeg` to generate the demo interview video; without
+it, the video is skipped. Runtime data (SQLite database and encrypted files)
+goes to `instance/`, which is not committed. Delete that folder to start over.
+
+## Tests
+
+```bash
+python -m pytest -q
+```
+
+`tests/test_crypto.py` covers the cipher layer: round-trips, a fresh IV or
+nonce per message, tamper and context-swap detection, and key wrapping.
+`tests/test_app.py` covers the web app end to end: no plaintext or filenames
+at rest, bit-exact retrieval from each copy, a tampered copy being refused,
+cross-user access, CSRF, cookie contents, password change and erasure.
+
+## Benchmark
+
+```bash
+taskset -c 2 python benchmark/run_benchmark.py   # ~2 min; --quick for a smoke test
+```
+
+Writes `benchmark/results/results.json`, `ciphers.csv` and `download.csv`.
+The committed results are the ones used in the report.
+
+## Layout
 
 ```text
-info_security/
-├── app.py                      # Point d'entrée principal (Serveur Web Flask)
-├── requirements.txt            # Liste des dépendances pip
-├── README.md                   # Documentation et guide d'utilisation
-├── REPORT.md                   # Rapport académique complet
-├── .gitignore                  # Fichiers et dossiers ignorés par git
-│
-├── src/                        # Code source métier & logique cryptographique
-│   ├── __init__.py
-│   ├── crypto_manager.py       # Moteur de chiffrement AES-CBC, DES-CBC, RC4 & profiling
-│   └── database.py             # Gestion SQLite, PBKDF2 et persistance des données
-│
-├── templates/                  # Templates HTML Jinja2 (Interface TailwindCSS & Chart.js)
-│   ├── base.html               # Layout principal et barre de navigation responsive
-│   ├── login.html              # Authentification utilisateur
-│   ├── register.html           # Inscription sécurisée
-│   ├── dashboard.html          # Vue d'ensemble, métriques et fichiers récents
-│   ├── profile.html            # Données privées GDPR/UU PDP & inspecteur de ciphertext
-│   ├── files.html              # Coffre-fort numérique (KTP, Documents, Vidéos)
-│   ├── upload.html             # Chiffrement & téléversement multi-algorithmes
-│   ├── benchmark.html          # Laboratoire d'analyse de performance et graphiques
-│   └── report.html             # Visualiseur web du rapport académique
-│
-├── scripts/                    # Scripts utilitaires et d'évaluation
-│   ├── seed_sample_data.py     # Initialisation avec données de test et mock KTP
-│   └── benchmark_cli.py        # Benchmark automatisé en ligne de commande (export CSV)
-│
-├── tests/                      # Suite de tests automatisés (Unit & Intégration)
-│   ├── __init__.py
-│   └── test_app.py             # Tests d'authentification, chiffrement et API
-│
-├── data/                       # Stockage persistant isolé (Zéro texte clair)
-│   ├── secure_vault.db         # Base de données SQLite chiffrée
-│   └── uploads/                # Fichiers chiffrés sur le disque (.enc uniquement)
-│
-└── output/                     # Résultats et exports de benchmarks
-    └── benchmark_results.csv   # Export des mesures statistiques
+run.py                    start the development server
+hrvault/
+  crypto/ciphers.py       AES-CBC, DES-CBC, RC4-drop3072 primitives
+  crypto/envelope.py      encrypt-then-MAC envelope (HMAC-SHA256, context binding)
+  crypto/keys.py          PBKDF2 login secrets, vault-key wrapping, per-cipher subkeys
+  catalog.py              stored fields and document types, with their UU PDP / GDPR classification
+  vault.py                store, retrieve, verify and delete personal data and documents
+  accounts.py             register, login, password change
+  keystore.py             in-memory store of unwrapped keys for logged-in users
+  routes.py               Flask views
+  db.py, config.py
+  templates/
+scripts/seed_demo.py      demo employee with a KTP scan, a .docx contract and an .mp4 video
+benchmark/                benchmark script and committed results
+tests/                    pytest suite
+docs/                     report (HTML source and PDF)
 ```
 
----
+To rebuild the PDF after editing the report:
 
-## 🚀 Guide de Démarrage Rapide
-
-### 1. Installation des Dépendances
 ```bash
-py -m pip install -r requirements.txt
+google-chrome --headless=new --no-pdf-header-footer --print-to-pdf=docs/REPORT.pdf "file://$PWD/docs/report.html"
 ```
-
-### 2. Initialiser la Base et les Données de Test
-Ce script crée un compte de démonstration, renseigne les données personnelles chiffrées conformes GDPR/UU PDP et génère des fichiers de test (fausse carte KTP PNG, document PDF, flux vidéo) chiffrés sous AES, DES et RC4 :
-```bash
-py scripts/seed_sample_data.py
-```
-*Identifiants de démonstration :*
-- **Nom d'utilisateur :** `student_group`
-- **Mot de passe :** `Password123!`
-
-### 3. Lancer l'Application Web
-```bash
-py app.py
-```
-Accédez à l'application dans votre navigateur : **[http://127.0.0.1:5000](http://127.0.0.1:5000)**
-
-### 4. Exécuter la Suite de Tests Automatisés
-```bash
-py tests/test_app.py
-```
-
-### 5. Exécuter le Benchmark en Ligne de Commande
-```bash
-py scripts/benchmark_cli.py --size 1024 --iterations 10
-```
-Les résultats sont automatiquement enregistrés dans `output/benchmark_results.csv`.
-
----
-
-## 🔒 Principes Cryptographiques et Conformité
-
-1. **Mode Non-ECB obligatoire :**
-   - Utilisation du mode **CBC (Cipher Block Chaining)** avec remplissage **PKCS#7** pour AES et DES.
-   - Vecteur d'initialisation (**IV**) aléatoire et unique généré via un générateur cryptographiquement sûr (`Crypto.Random.get_random_bytes`) pour chaque opération. Format : `[IV] + [Ciphertext]`.
-   - **RC4 :** Chiffre à flux fonctionnant par XOR sur keystream sans padding.
-
-2. **Authentification & Dérivation de Clés :**
-   - Hachage des mots de passe par **PBKDF2-HMAC-SHA256** (100 000 itérations) avec sel aléatoire de 16 octets.
-   - Dérivation des clés de chiffrement par utilisateur avec **PBKDF2-HMAC-SHA256**.
-
-3. **Protection des Données Personnelles (GDPR / UU PDP No. 27/2022) :**
-   - **Données spécifiques / sensibles :** NIK (Numéro d'identité national), coordonnées bancaires, données de santé.
-   - **Données générales :** Nom, genre, religion, état civil, date/lieu de naissance, adresse, téléphone, email.
-   - **Inspecteur de Ciphertext :** Permet de visualiser dans la base SQLite les chaînes Base64 chiffrées attestant de l'absence totale de fuite en clair.
