@@ -1,3 +1,8 @@
+# PROJECT, 2026
+# info_security
+# File description:
+# Password-based key derivation and vault-key wrapping.
+
 """Password-based key hierarchy.
 
     password + per-user salt --PBKDF2-HMAC-SHA256--> master (32 B)
@@ -6,77 +11,67 @@
 
     vault key (32 random bytes, one per user)
         stored only wrapped by the KEK with AES-256-GCM
-        --HMAC "enc:<cipher>"--> AES-256 / DES / RC4-128 encryption keys
-        --HMAC "mac:<cipher>"--> one HMAC-SHA256 key per cipher
 
-Because the vault key is random and independent of the password, a password
-change only re-wraps 32 bytes instead of re-encrypting every document.
+Because the vault key is random and independent of the password, a
+password change only re-wraps 32 bytes instead of re-encrypting every
+document. Per-cipher subkeys are derived in `vault_keys.py`.
 """
 
 import hashlib
 import hmac
-from dataclasses import dataclass, field
 
 from Crypto.Cipher import AES
 from Crypto.Random import get_random_bytes
 
-from . import ciphers, envelope
+from .envelope import IntegrityError
 
 SALT_SIZE = 16
-VAULT_KEY_SIZE = 32
+GCM_NONCE_SIZE = 12
+GCM_TAG_SIZE = 16
 
 
-def _label(key: bytes, label: str) -> bytes:
+def label_key(key: bytes, label: str) -> bytes:
+    """Derive an independent 32-byte subkey from `key` for `label`."""
     return hmac.new(key, label.encode(), hashlib.sha256).digest()
 
 
 def new_salt() -> bytes:
+    """Return a fresh random per-user salt."""
     return get_random_bytes(SALT_SIZE)
 
 
-def derive_login_secrets(password: str, salt: bytes, iterations: int) -> tuple[bytes, bytes]:
-    """Return (verifier_hash, kek). One slow PBKDF2 run serves both login and unwrapping."""
-    master = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, iterations)
-    verifier_hash = hashlib.sha256(_label(master, "auth")).digest()
-    return verifier_hash, _label(master, "kek")
+def derive_login_secrets(password: str, salt: bytes, iterations: int):
+    """Return (verifier_hash, kek) from one slow PBKDF2 run.
+
+    The same run serves both the login check and unwrapping the vault
+    key, so a login costs a single PBKDF2 computation.
+    """
+    master = hashlib.pbkdf2_hmac("sha256", password.encode(), salt,
+                                 iterations)
+    verifier_hash = hashlib.sha256(label_key(master, "auth")).digest()
+    return verifier_hash, label_key(master, "kek")
+
+
+def _gcm(kek: bytes, nonce: bytes, username: str):
+    """AES-256-GCM object whose associated data binds the key to a user."""
+    gcm = AES.new(kek, AES.MODE_GCM, nonce=nonce)
+    gcm.update(b"vault-key|" + username.encode())
+    return gcm
 
 
 def wrap_vault_key(kek: bytes, vault_key: bytes, username: str) -> bytes:
-    nonce = get_random_bytes(12)
-    gcm = AES.new(kek, AES.MODE_GCM, nonce=nonce)
-    gcm.update(b"vault-key|" + username.encode())
-    ct, tag = gcm.encrypt_and_digest(vault_key)
-    return nonce + ct + tag
+    """Encrypt the vault key under the KEK: nonce | ciphertext | tag."""
+    nonce = get_random_bytes(GCM_NONCE_SIZE)
+    ciphertext, tag = _gcm(kek, nonce, username).encrypt_and_digest(vault_key)
+    return nonce + ciphertext + tag
 
 
 def unwrap_vault_key(kek: bytes, wrapped: bytes, username: str) -> bytes:
-    nonce, ct, tag = wrapped[:12], wrapped[12:-16], wrapped[-16:]
-    gcm = AES.new(kek, AES.MODE_GCM, nonce=nonce)
-    gcm.update(b"vault-key|" + username.encode())
+    """Decrypt the vault key; raise IntegrityError on a wrong key or user."""
+    nonce = wrapped[:GCM_NONCE_SIZE]
+    ciphertext = wrapped[GCM_NONCE_SIZE:-GCM_TAG_SIZE]
+    tag = wrapped[-GCM_TAG_SIZE:]
     try:
-        return gcm.decrypt_and_verify(ct, tag)
+        return _gcm(kek, nonce, username).decrypt_and_verify(ciphertext, tag)
     except ValueError as exc:
-        raise envelope.IntegrityError("vault key could not be unwrapped") from exc
-
-
-@dataclass(frozen=True)
-class VaultKeys:
-    """Per-user subkeys derived from the vault key. Lives only in server memory."""
-
-    vault_key: bytes = field(repr=False)
-
-    @classmethod
-    def generate(cls) -> "VaultKeys":
-        return cls(get_random_bytes(VAULT_KEY_SIZE))
-
-    def enc_key(self, cipher: str) -> bytes:
-        return _label(self.vault_key, f"enc:{cipher}")[: ciphers.KEY_SIZES[cipher]]
-
-    def mac_key(self, cipher: str) -> bytes:
-        return _label(self.vault_key, f"mac:{cipher}")
-
-    def seal(self, cipher: str, plaintext: bytes, context: str) -> bytes:
-        return envelope.seal(cipher, self.enc_key(cipher), self.mac_key(cipher), plaintext, context)
-
-    def open(self, cipher: str, sealed: bytes, context: str) -> bytes:
-        return envelope.open_(cipher, self.enc_key(cipher), self.mac_key(cipher), sealed, context)
+        raise IntegrityError("vault key could not be unwrapped") from exc
