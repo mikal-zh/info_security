@@ -18,6 +18,12 @@ integrity check is never returned.
 The report is in [docs/REPORT.pdf](docs/REPORT.pdf)
 (source: [docs/report.html](docs/report.html)).
 
+## AI usage
+
+This project was built with the help of an AI assistant (Claude Code).
+The full conversation, with every prompt, every answer and every action
+the AI took, is in [docs/ai-conversation.md](docs/ai-conversation.md).
+
 ## Run it
 
 ```bash
