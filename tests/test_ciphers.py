@@ -44,8 +44,8 @@ def test_rc4_messages_never_share_keystream(vault):
     plain1, plain2 = os.urandom(256), os.urandom(256)
     body1 = vault.seal("RC4", plain1, "ctx")[RC4_BODY]
     body2 = vault.seal("RC4", plain2, "ctx")[RC4_BODY]
-    xor_cipher = bytes(a ^ b for a, b in zip(body1, body2))
-    xor_plain = bytes(a ^ b for a, b in zip(plain1, plain2))
+    xor_cipher = bytes(left ^ right for left, right in zip(body1, body2))
+    xor_plain = bytes(left ^ right for left, right in zip(plain1, plain2))
     assert xor_cipher != xor_plain
 
 

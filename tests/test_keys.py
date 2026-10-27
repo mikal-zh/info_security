@@ -16,9 +16,10 @@ def test_subkeys_are_independent():
     """Every encryption and MAC key differs, with the right key sizes."""
     vault = VaultKeys.generate()
     pairs = [vault.cipher_keys(cipher) for cipher in CIPHERS]
-    derived = [p.enc_key for p in pairs] + [p.mac_key for p in pairs]
+    enc_keys = [pair.enc_key for pair in pairs]
+    derived = enc_keys + [pair.mac_key for pair in pairs]
     assert len({key[:8] for key in derived}) == len(derived)
-    assert [len(p.enc_key) for p in pairs] == [32, 8, 16]
+    assert [len(key) for key in enc_keys] == [32, 8, 16]
 
 
 def test_vault_key_unwraps_with_right_password():
