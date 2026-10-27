@@ -1,24 +1,57 @@
+{#
+  PROJECT, 2026
+  info_security
+  File description:
+  Personal-data form with per-copy integrity status and ciphertext view.
+#}
 {% extends "base.html" %}
 {% block title %}Personal Data{% endblock %}
 {% block content %}
-{% set group_icons = {'Identity': 'fa-id-card', 'Contact': 'fa-address-book', 'Payroll': 'fa-money-check-dollar', 'Health': 'fa-heart-pulse', 'Family': 'fa-people-roof'} %}
+{% set group_icons = {'Identity': 'fa-id-card', 'Contact': 'fa-address-book',
+                      'Payroll': 'fa-money-check-dollar',
+                      'Health': 'fa-heart-pulse',
+                      'Family': 'fa-people-roof'} %}
+{% set specific_class = "bg-rose-500/15 text-rose-300 border
+  border-rose-500/30" %}
+{% set general_class = "bg-slate-700 text-slate-300 border
+  border-slate-600" %}
+{% set input_class = "w-full bg-slate-900/80 border border-slate-700
+  rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none
+  focus:border-sky-500 focus:ring-1 focus:ring-sky-500" %}
 <div class="space-y-6">
 
-  <div class="rounded-2xl bg-slate-800/80 border border-slate-700/80 p-6 shadow-xl">
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+  <div class="rounded-2xl bg-slate-800/80 border border-slate-700/80 p-6
+              shadow-xl">
+    <div class="flex flex-col md:flex-row md:items-center justify-between
+                gap-4">
       <div>
-        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-semibold mb-2">
-          <i class="fa-solid fa-scale-balanced"></i><span>Classified under UU PDP No. 27/2022 & EU GDPR</span>
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full
+                    bg-indigo-500/10 border border-indigo-500/20
+                    text-indigo-400 text-xs font-semibold mb-2">
+          <i class="fa-solid fa-scale-balanced"></i>
+          <span>Classified under UU PDP No. 27/2022 & EU GDPR</span>
         </div>
-        <h1 class="text-2xl font-bold text-white tracking-tight">About you</h1>
+        <h1 class="text-2xl font-bold text-white tracking-tight">
+          About you
+        </h1>
         <p class="text-xs text-slate-400 mt-1 max-w-3xl">
-          <span class="px-1.5 py-0.5 rounded bg-rose-500/15 text-rose-300 border border-rose-500/30">specific</span> means the law treats it as extra sensitive (UU PDP Pasal 4(2), GDPR Art. 9).
-          <span class="px-1.5 py-0.5 rounded bg-slate-700 text-slate-300 border border-slate-600">general</span> still says who you are (UU PDP Pasal 4(3)). We protect both the same way: each field on its own, three times over.
+          <span class="px-1.5 py-0.5 rounded {{ specific_class }}">
+            specific</span>
+          means the law treats it as extra sensitive (UU PDP Pasal 4(2),
+          GDPR Art. 9).
+          <span class="px-1.5 py-0.5 rounded {{ general_class }}">
+            general</span>
+          still says who you are (UU PDP Pasal 4(3)). We protect both the
+          same way: each field on its own, three times over.
         </p>
       </div>
-      <label class="inline-flex items-center gap-2 text-sm text-slate-300 cursor-pointer select-none">
-        <input type="checkbox" id="inspect" class="accent-sky-500" onchange="document.querySelectorAll('.cipher-view').forEach(e => e.classList.toggle('hidden', !this.checked))">
-        <i class="fa-solid fa-magnifying-glass text-sky-400"></i> Show me what you actually store
+      <label class="inline-flex items-center gap-2 text-sm text-slate-300
+                    cursor-pointer select-none">
+        <input type="checkbox" id="inspect" class="accent-sky-500"
+               onchange="document.querySelectorAll('.cipher-view')
+                 .forEach(e => e.classList.toggle('hidden', !this.checked))">
+        <i class="fa-solid fa-magnifying-glass text-sky-400"></i>
+        Show me what you actually store
       </label>
     </div>
   </div>
@@ -26,38 +59,67 @@
   <form method="post" class="space-y-6">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     {% for group, fields in groups.items() %}
-    <div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-6 shadow-lg">
-      <h2 class="text-sm font-bold text-white uppercase tracking-wider mb-4 flex items-center gap-2">
-        <i class="fa-solid {{ group_icons.get(group, 'fa-circle') }} text-sky-400"></i> {{ group }}
+    <div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-6
+                shadow-lg">
+      <h2 class="text-sm font-bold text-white uppercase tracking-wider mb-4
+                 flex items-center gap-2">
+        <i class="fa-solid {{ group_icons.get(group, 'fa-circle') }}
+                  text-sky-400"></i>
+        {{ group }}
       </h2>
       <div class="grid md:grid-cols-2 gap-5">
-        {% for f in fields %}
-        {% set s = stored.get(f.name) %}
-        <div class="{{ 'md:col-span-2' if f.multiline }}">
-          <label for="{{ f.name }}" class="flex items-center gap-2 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
-            {{ f.label }}
-            <span class="normal-case tracking-normal font-medium px-1.5 py-0.5 rounded {{ 'bg-rose-500/15 text-rose-300 border border-rose-500/30' if f.level == 'specific' else 'bg-slate-700 text-slate-300 border border-slate-600' }}" title="{{ f.basis }}">{{ f.level }}</span>
+        {% for field in fields %}
+        {% set stored_field = stored.get(field.name) %}
+        {% set value = stored_field.value if stored_field else '' %}
+        <div class="{{ 'md:col-span-2' if field.multiline }}">
+          <label for="{{ field.name }}"
+                 class="flex items-center gap-2 text-xs font-semibold
+                        text-slate-400 uppercase tracking-wider mb-1.5">
+            {{ field.label }}
+            <span title="{{ field.basis }}"
+                  class="normal-case tracking-normal font-medium px-1.5
+                         py-0.5 rounded
+                         {{ specific_class if field.level == 'specific'
+                            else general_class }}">{{ field.level }}</span>
           </label>
-          {% if f.multiline %}
-          <textarea id="{{ f.name }}" name="{{ f.name }}" rows="2" class="w-full bg-slate-900/80 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500">{{ s.value if s else '' }}</textarea>
+          {% if field.multiline %}
+          <textarea id="{{ field.name }}" name="{{ field.name }}" rows="2"
+                    class="{{ input_class }}">{{ value }}</textarea>
           {% else %}
-          <input id="{{ f.name }}" name="{{ f.name }}" value="{{ s.value if s else '' }}" class="w-full bg-slate-900/80 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500">
+          <input id="{{ field.name }}" name="{{ field.name }}"
+                 value="{{ value }}" class="{{ input_class }}">
           {% endif %}
-          <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-[11px]">
-            <span class="text-slate-500">{{ f.basis }}</span>
-            {% if s %}
-              {% for c in ciphers %}
-              <span class="font-mono {{ 'text-emerald-400' if s.copies[c] else 'text-rose-400' }}" title="{{ s.stored_bytes[c] }} bytes stored">
-                <i class="fa-solid {{ 'fa-circle-check' if s.copies[c] else 'fa-circle-xmark' }}"></i> {{ c }}
+          <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5
+                      text-[11px]">
+            <span class="text-slate-500">{{ field.basis }}</span>
+            {% if stored_field %}
+              {% for cipher in ciphers %}
+              {% set ok = stored_field.copies[cipher] %}
+              <span title="{{ stored_field.stored_bytes[cipher] }} bytes"
+                    class="font-mono
+                           {{ 'text-emerald-400' if ok
+                              else 'text-rose-400' }}">
+                <i class="fa-solid {{ 'fa-circle-check' if ok
+                                      else 'fa-circle-xmark' }}"></i>
+                {{ cipher }}
               </span>
               {% endfor %}
-              {% if not s.consistent %}<span class="text-rose-400 font-semibold">copies disagree</span>{% endif %}
+              {% if not stored_field.consistent %}
+              <span class="text-rose-400 font-semibold">
+                copies disagree</span>
+              {% endif %}
             {% endif %}
           </div>
-          {% if s %}
-          <div class="cipher-view hidden mt-2 rounded-lg bg-slate-950/70 border border-slate-700/60 p-2.5 space-y-1">
-            {% for c in ciphers %}
-            <div class="font-mono text-[11px] text-slate-400 truncate"><span class="text-sky-400 inline-block w-9">{{ c }}</span>{{ s.preview[c] }}… <span class="text-slate-600">({{ s.stored_bytes[c] }} B)</span></div>
+          {% if stored_field %}
+          <div class="cipher-view hidden mt-2 rounded-lg bg-slate-950/70
+                      border border-slate-700/60 p-2.5 space-y-1">
+            {% for cipher in ciphers %}
+            <div class="font-mono text-[11px] text-slate-400 truncate">
+              <span class="text-sky-400 inline-block w-9">{{ cipher }}</span>
+              {{ stored_field.preview[cipher] }}…
+              <span class="text-slate-600">
+                ({{ stored_field.stored_bytes[cipher] }} B)</span>
+            </div>
             {% endfor %}
           </div>
           {% endif %}
@@ -67,7 +129,11 @@
     </div>
     {% endfor %}
     <div class="flex justify-end">
-      <button class="inline-flex items-center px-6 py-3 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white text-sm font-semibold shadow-lg shadow-sky-500/20 transition-all">
+      <button class="inline-flex items-center px-6 py-3 rounded-xl
+                     bg-gradient-to-r from-sky-500 to-blue-600
+                     hover:from-sky-400 hover:to-blue-500 text-white text-sm
+                     font-semibold shadow-lg shadow-sky-500/20
+                     transition-all">
         <i class="fa-solid fa-lock mr-2"></i> Lock it away
       </button>
     </div>

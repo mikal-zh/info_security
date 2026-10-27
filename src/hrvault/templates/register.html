@@ -1,37 +1,75 @@
+{#
+  PROJECT, 2026
+  info_security
+  File description:
+  Registration page for new employees.
+#}
 {% extends "base.html" %}
 {% block title %}Register{% endblock %}
 {% block content %}
+{% set input_class = "w-full bg-slate-900/80 border border-slate-700
+  rounded-xl pl-10 pr-4 py-2.5 text-sm text-white focus:outline-none
+  focus:border-sky-500 focus:ring-1 focus:ring-sky-500" %}
+{% set inputs = [
+  ('username', 'Employee number', 'fa-user', 'text'),
+  ('password', 'Password', 'fa-key', 'password'),
+  ('confirm', 'Confirm password', 'fa-key', 'password'),
+] %}
 <div class="flex items-center justify-center py-10">
-  <div class="w-full max-w-md bg-slate-800/80 border border-slate-700/80 rounded-2xl p-8 shadow-2xl">
+  <div class="w-full max-w-md bg-slate-800/80 border border-slate-700/80
+              rounded-2xl p-8 shadow-2xl">
     <div class="text-center mb-6">
-      <div class="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-tr from-emerald-500 to-sky-600 flex items-center justify-center shadow-lg shadow-emerald-500/20 mb-4">
+      <div class="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-tr
+                  from-emerald-500 to-sky-600 flex items-center
+                  justify-center shadow-lg shadow-emerald-500/20 mb-4">
         <i class="fa-solid fa-user-plus text-white text-2xl"></i>
       </div>
-      <h1 class="text-2xl font-extrabold text-white tracking-tight">Welcome aboard!</h1>
-      <p class="text-sm text-slate-400 mt-1">Two minutes and you're set. You'll find your employee number on your offer letter.</p>
+      <h1 class="text-2xl font-extrabold text-white tracking-tight">
+        Welcome aboard!
+      </h1>
+      <p class="text-sm text-slate-400 mt-1">
+        Two minutes and you're set. You'll find your employee number on
+        your offer letter.
+      </p>
     </div>
-    <div class="mb-5 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs flex gap-2">
+    <div class="mb-5 p-3 rounded-xl bg-amber-500/10 border
+                border-amber-500/20 text-amber-300 text-xs flex gap-2">
       <i class="fa-solid fa-triangle-exclamation mt-0.5"></i>
-      <span>Pick a password you'll remember. We really mean it: your data is locked with a key that only your password opens, so we can't reset it for you. At least 10 characters; a short sentence works well.</span>
+      <span>
+        Pick a password you'll remember. We really mean it: your data is
+        locked with a key that only your password opens, so we can't reset
+        it for you. At least 10 characters; a short sentence works well.
+      </span>
     </div>
     <form method="post" class="space-y-4">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-      {% for name, label, icon, type in [('username', 'Employee number', 'fa-user', 'text'), ('password', 'Password', 'fa-key', 'password'), ('confirm', 'Confirm password', 'fa-key', 'password')] %}
+      {% for name, label, icon, kind in inputs %}
       <div>
-        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">{{ label }}</label>
+        <label class="block text-xs font-semibold text-slate-400 uppercase
+                      tracking-wider mb-1.5">{{ label }}</label>
         <div class="relative">
-          <i class="fa-solid {{ icon }} absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 text-sm"></i>
-          <input name="{{ name }}" type="{{ type }}" required
-                 {% if type == 'password' %}minlength="10"{% else %}pattern="[A-Za-z0-9._\-]{3,32}"{% endif %}
-                 class="w-full bg-slate-900/80 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500">
+          <i class="fa-solid {{ icon }} absolute left-3.5 top-1/2
+                    -translate-y-1/2 text-slate-500 text-sm"></i>
+          <input name="{{ name }}" type="{{ kind }}" required
+                 {% if kind == 'password' %}minlength="10"
+                 {% else %}pattern="[A-Za-z0-9._\-]{3,32}"{% endif %}
+                 class="{{ input_class }}">
         </div>
       </div>
       {% endfor %}
-      <button class="w-full bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-semibold py-2.5 rounded-xl shadow-lg shadow-sky-500/20 transition-all">
+      <button class="w-full bg-gradient-to-r from-sky-500 to-blue-600
+                     hover:from-sky-400 hover:to-blue-500 text-white
+                     font-semibold py-2.5 rounded-xl shadow-lg
+                     shadow-sky-500/20 transition-all">
         <i class="fa-solid fa-shield-halved mr-1.5"></i> Create my account
       </button>
     </form>
-    <p class="text-sm text-center text-slate-400 mt-6"><a href="{{ url_for('web.login') }}" class="text-sky-400 hover:text-sky-300 font-medium">I already have an account</a></p>
+    <p class="text-sm text-center text-slate-400 mt-6">
+      <a href="{{ url_for('web.login') }}"
+         class="text-sky-400 hover:text-sky-300 font-medium">
+        I already have an account
+      </a>
+    </p>
   </div>
 </div>
 {% endblock %}
