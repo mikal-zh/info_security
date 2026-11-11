@@ -40,6 +40,7 @@ class SignatureCheck:
     authentic: bool = False
     whole_file: bool = False
     certificate_ok: bool = False
+    registered_user: str | None = None
     problems: list[str] = field(default_factory=list)
 
     @property
