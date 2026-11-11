@@ -1,13 +1,15 @@
 # PROJECT, 2026
 # info_security
 # File description:
-# Create a demo employee with realistic onboarding data.
+# Create a demo employee and an HR officer who asked for their file.
 
-"""Create a demo employee with realistic onboarding data.
+"""Create a demo employee and an HR officer who asked for their file.
 
     python demo/seed.py
 
-Login: emp-0001 / onboarding-2026. All data is fictitious.
+Logins: emp-0001 and hr-0001, both with the password onboarding-2026.
+Log in as emp-0001 and open Sharing to approve hr-0001's request. All
+data is fictitious.
 """
 
 import sys
@@ -17,10 +19,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 import fake_documents  # noqa: E402
 
-from hrvault import accounts, create_app, db, documents, personal  # noqa
+from hrvault import accounts, create_app, db, documents  # noqa: E402
+from hrvault import keypairs, personal, sharing  # noqa: E402
 from hrvault.owner import Owner  # noqa: E402
 
 DEMO = accounts.Credentials("emp-0001", "onboarding-2026")
+HR = accounts.Credentials("hr-0001", "onboarding-2026")
 DOCX_MIME = ("application/vnd.openxmlformats-officedocument."
              "wordprocessingml.document")
 
@@ -60,33 +64,43 @@ def demo_uploads() -> list[documents.Upload]:
     return uploads
 
 
-def create_demo_owner(app) -> Owner | None:
-    """Register and log in the demo employee; None if they exist."""
+def create_demo_owner(app, creds: accounts.Credentials) -> Owner | None:
+    """Register and log in a demo user with a key pair; None if present."""
     conn = db.get()
     iterations = app.config["PBKDF2_ITERATIONS"]
     if conn.execute("SELECT 1 FROM users WHERE username = ?",
-                    (DEMO.username,)).fetchone():
+                    (creds.username,)).fetchone():
         return None
-    accounts.register(conn, DEMO, iterations)
-    user_id, keys = accounts.login(conn, DEMO, iterations)
-    return Owner(conn, app.config["BLOB_DIR"], user_id, keys)
+    accounts.register(conn, creds, iterations)
+    user_id, keys = accounts.login(conn, creds, iterations)
+    owner = Owner(conn, app.config["BLOB_DIR"], user_id, keys)
+    keypairs.ensure_key_pair(owner, app.config["RSA_KEY_BITS"])
+    return owner
+
+
+def seed_employee(owner: Owner) -> None:
+    """Store the demo employee's personal data and documents."""
+    personal.save_personal_data(owner, PERSONAL_DATA)
+    for upload in demo_uploads():
+        documents.store_document(owner, upload)
+        print(f"stored {upload.filename} "
+              f"({len(upload.data) / 1024:,.0f} KB) x3")
 
 
 def main():
-    """Seed the demo employee's personal data and documents."""
+    """Seed the demo employee, then the HR officer and their request."""
     app = create_app()
     with app.app_context():
-        owner = create_demo_owner(app)
+        owner = create_demo_owner(app, DEMO)
         if owner is None:
             print(f"{DEMO.username} already exists; delete the instance/ "
                   "folder to reseed.")
             return
-        personal.save_personal_data(owner, PERSONAL_DATA)
-        for upload in demo_uploads():
-            documents.store_document(owner, upload)
-            print(f"stored {upload.filename} "
-                  f"({len(upload.data) / 1024:,.0f} KB) x3")
-    print(f"\nDemo ready. Log in as {DEMO.username} / {DEMO.password}")
+        seed_employee(owner)
+        hr_officer = create_demo_owner(app, HR)
+        sharing.request_access(db.get(), hr_officer.user_id, DEMO.username)
+    print(f"\nDemo ready. Log in as {DEMO.username} / {DEMO.password} and "
+          f"approve {HR.username}'s request on the Sharing page.")
 
 
 if __name__ == "__main__":
