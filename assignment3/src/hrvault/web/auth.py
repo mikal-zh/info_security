@@ -9,7 +9,7 @@ from flask import (flash, g, redirect, render_template, request, session,
                    url_for)
 
 from .. import accounts, db, keypairs
-from .blueprint import bp, iterations, keystore, owner_of, rsa_bits
+from .blueprint import bp, iterations, keystore
 
 
 def _form_credentials() -> accounts.Credentials:
@@ -50,19 +50,18 @@ def register():
 
 
 def _open_session(result, username: str):
-    """Open a session, creating the user's RSA key pair on first login.
+    """Open a session and remind users who have no key pair yet.
 
     The session is cleared first so the logged-in user gets a new
     session id.
     """
     user_id, keys = result
-    created = keypairs.ensure_key_pair(owner_of(user_id, keys), rsa_bits())
     session.clear()
     session["token"] = keystore().open_session(user_id, keys)
     session["username"] = username
-    if created:
-        flash("Welcome! We generated your RSA key pair. Its private half "
-              "is locked with your password.", "info")
+    if keypairs.public_key_of(db.get(), user_id) is None:
+        flash("You don't have a signing key yet. Generate one or import "
+              "your own on the Keys page.", "info")
     return redirect(url_for("web.dashboard"))
 
 

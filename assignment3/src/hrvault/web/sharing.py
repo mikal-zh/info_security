@@ -9,7 +9,7 @@ from flask import abort, flash, g, redirect, render_template, request, url_for
 
 from .. import db, keypairs, share_snapshot, shared_view, sharing
 from ..crypto import IntegrityError
-from .blueprint import bp, current_owner, share_dir
+from .blueprint import bp, current_owner, rsa_bits, share_dir
 from .documents import file_response
 
 DECISIONS = {
@@ -30,8 +30,10 @@ def sharing_page():
 
 @bp.post("/sharing/request")
 def request_access():
-    """Ask another employee for access to their file."""
+    """Ask for a file, generating the requester's key pair if missing."""
     username = request.form.get("username", "").strip()
+    if keypairs.ensure_key_pair(current_owner(), rsa_bits()):
+        flash("You had no key pair, so we generated one for you.", "info")
     try:
         sharing.request_access(db.get(), g.user_id, username)
     except sharing.SharingError as exc:
