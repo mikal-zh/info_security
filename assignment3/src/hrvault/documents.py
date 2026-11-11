@@ -36,7 +36,7 @@ class Upload:
     data: bytes
 
 
-def _blob_path(owner: Owner, doc_uuid: str, cipher: str):
+def blob_path(owner: Owner, doc_uuid: str, cipher: str):
     """Disk path of one encrypted copy; it reveals neither name nor owner."""
     return owner.blob_dir / f"{doc_uuid}.{cipher.lower()}"
 
@@ -62,7 +62,7 @@ def store_document(owner: Owner, upload: Upload) -> str:
     meta_ctx = owner.context(f"doc:{doc_uuid}|meta")
     for cipher in CIPHERS:
         sealed = owner.keys.seal(cipher, upload.data, blob_ctx)
-        _blob_path(owner, doc_uuid, cipher).write_bytes(sealed)
+        blob_path(owner, doc_uuid, cipher).write_bytes(sealed)
     metas = []
     for cipher in CIPHERS:
         metas.append(owner.keys.seal(cipher, meta, meta_ctx))
@@ -96,7 +96,7 @@ def list_documents(owner: Owner) -> list[dict]:
     return docs
 
 
-def _own_document(owner: Owner, doc_id: int):
+def own_document(owner: Owner, doc_id: int):
     """The document row, or None if it does not belong to the owner."""
     return owner.conn.execute(
         "SELECT * FROM documents WHERE id = ? AND user_id = ?",
@@ -111,11 +111,11 @@ def read_document(owner: Owner, doc_id: int, cipher: str):
     """
     if cipher not in CIPHERS:
         raise ValueError(f"unknown cipher {cipher!r}")
-    row = _own_document(owner, doc_id)
+    row = own_document(owner, doc_id)
     if row is None:
         return None
     meta = _open_meta(owner, row, cipher)
-    sealed = _blob_path(owner, row["uuid"], cipher).read_bytes()
+    sealed = blob_path(owner, row["uuid"], cipher).read_bytes()
     context = owner.context(f"doc:{row['uuid']}|blob")
     data = owner.keys.open(cipher, sealed, context)
     if hashlib.sha256(data).hexdigest() != meta["sha256"]:
@@ -125,14 +125,14 @@ def read_document(owner: Owner, doc_id: int, cipher: str):
 
 def verify_document(owner: Owner, doc_id: int) -> dict | None:
     """Check all three copies: {cipher: (ok, size on disk or error)}."""
-    row = _own_document(owner, doc_id)
+    row = own_document(owner, doc_id)
     if row is None:
         return None
     report = {}
     for cipher in CIPHERS:
         try:
             read_document(owner, doc_id, cipher)
-            size = _blob_path(owner, row["uuid"], cipher).stat().st_size
+            size = blob_path(owner, row["uuid"], cipher).stat().st_size
             report[cipher] = (True, size)
         except (IntegrityError, OSError, ValueError) as exc:
             report[cipher] = (False, str(exc))
@@ -141,11 +141,11 @@ def verify_document(owner: Owner, doc_id: int) -> dict | None:
 
 def delete_document(owner: Owner, doc_id: int) -> bool:
     """Delete the row and its three files; False if not the owner's."""
-    row = _own_document(owner, doc_id)
+    row = own_document(owner, doc_id)
     if row is None:
         return False
     for cipher in CIPHERS:
-        _blob_path(owner, row["uuid"], cipher).unlink(missing_ok=True)
+        blob_path(owner, row["uuid"], cipher).unlink(missing_ok=True)
     owner.conn.execute("DELETE FROM documents WHERE id = ?", (doc_id,))
     owner.conn.commit()
     return True

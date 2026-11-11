@@ -22,8 +22,8 @@ the shared copy, so the wrapped key no longer opens anything.
 import json
 import uuid
 
-from . import documents, keypairs, personal, sharing
-from .crypto import CIPHERS, IntegrityError, VaultKeys, rsa_keys
+from . import document_copies, documents, keypairs, personal, sharing
+from .crypto import VaultKeys, rsa_keys
 from .owner import Owner
 
 SHARE_CIPHER = "AES"
@@ -53,21 +53,11 @@ def _seal_fields(owner: Owner, share_keys: VaultKeys,
         owner.conn.execute(INSERT_FIELD, (request_id, name, sealed))
 
 
-def _first_intact_copy(owner: Owner, doc_id: int):
-    """(metadata, data) from the first copy that verifies, else None."""
-    for cipher in CIPHERS:
-        try:
-            return documents.read_document(owner, doc_id, cipher)
-        except (IntegrityError, OSError):
-            continue
-    return None
-
-
 def _seal_document(owner: Owner, share_keys: VaultKeys, doc: dict,
                    share: tuple) -> None:
     """Copy one document under the share key; share = (id, folder)."""
     request_id, share_dir = share
-    found = _first_intact_copy(owner, doc["id"])
+    found = document_copies.first_intact_copy(owner, doc["id"])
     if found is None:
         return
     meta, data = found
