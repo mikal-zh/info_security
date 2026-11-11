@@ -13,9 +13,9 @@ from tests.helpers import register_and_login
 
 @pytest.fixture
 def app(tmp_path):
-    """An app with its own empty data folder and a fast PBKDF2."""
+    """An app with its own data folder, fast PBKDF2 and small RSA keys."""
     return create_app({"DATA_DIR": tmp_path, "PBKDF2_ITERATIONS": 1000,
-                       "TESTING": True})
+                       "RSA_KEY_BITS": 1024, "TESTING": True})
 
 
 @pytest.fixture

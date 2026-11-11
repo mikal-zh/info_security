@@ -26,6 +26,21 @@ def iterations() -> int:
     return current_app.config["PBKDF2_ITERATIONS"]
 
 
+def rsa_bits() -> int:
+    """Modulus size of newly generated RSA key pairs."""
+    return current_app.config["RSA_KEY_BITS"]
+
+
+def share_dir():
+    """Folder holding the encrypted files of shared documents."""
+    return current_app.config["SHARE_DIR"]
+
+
+def owner_of(user_id: int, keys) -> Owner:
+    """An Owner for this user, with the request's database connection."""
+    return Owner(db.get(), current_app.config["BLOB_DIR"], user_id, keys)
+
+
 def current_owner() -> Owner:
     """The logged-in employee, with the request's database connection."""
-    return Owner(db.get(), current_app.config["BLOB_DIR"], g.user_id, g.keys)
+    return owner_of(g.user_id, g.keys)

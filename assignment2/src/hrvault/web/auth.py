@@ -8,8 +8,8 @@
 from flask import (flash, g, redirect, render_template, request, session,
                    url_for)
 
-from .. import accounts, db
-from .blueprint import bp, iterations, keystore
+from .. import accounts, db, keypairs
+from .blueprint import bp, iterations, keystore, owner_of, rsa_bits
 
 
 def _form_credentials() -> accounts.Credentials:
@@ -49,13 +49,26 @@ def register():
     return render_template("register.html")
 
 
-@bp.route("/login", methods=["GET", "POST"])
-def login():
-    """Check credentials, unwrap the vault key and open a session.
+def _open_session(result, username: str):
+    """Open a session, creating the user's RSA key pair on first login.
 
     The session is cleared first so the logged-in user gets a new
     session id.
     """
+    user_id, keys = result
+    created = keypairs.ensure_key_pair(owner_of(user_id, keys), rsa_bits())
+    session.clear()
+    session["token"] = keystore().open_session(user_id, keys)
+    session["username"] = username
+    if created:
+        flash("Welcome! We generated your RSA key pair. Its private half "
+              "is locked with your password.", "info")
+    return redirect(url_for("web.dashboard"))
+
+
+@bp.route("/login", methods=["GET", "POST"])
+def login():
+    """Check credentials, unwrap the vault key and open a session."""
     if request.method != "POST":
         return render_template("login.html")
     creds = _form_credentials()
@@ -64,10 +77,7 @@ def login():
         flash("That employee number and password don't match. Your number "
               "is on your offer letter.", "danger")
         return render_template("login.html")
-    session.clear()
-    session["token"] = keystore().open_session(*result)
-    session["username"] = creds.username
-    return redirect(url_for("web.dashboard"))
+    return _open_session(result, creds.username)
 
 
 @bp.route("/logout", methods=["POST"])
