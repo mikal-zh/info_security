@@ -52,10 +52,10 @@ def _send(doc_id: int, as_attachment: bool):
         return redirect(url_for("web.documents_page"))
     if found is None:
         abort(404)
-    return _file_response(*found, as_attachment)
+    return file_response(*found, as_attachment)
 
 
-def _file_response(meta: dict, data: bytes, as_attachment: bool):
+def file_response(meta: dict, data: bytes, as_attachment: bool):
     """Response carrying decrypted bytes, never cached by the browser."""
     resp = send_file(io.BytesIO(data), mimetype=meta["mime"],
                      as_attachment=as_attachment,

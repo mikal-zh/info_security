@@ -8,14 +8,15 @@
 from flask import (flash, g, redirect, render_template, request, session,
                    url_for)
 
-from .. import accounts, db, documents
-from .blueprint import bp, current_owner, iterations, keystore
+from .. import accounts, db, documents, keypairs, share_snapshot
+from .blueprint import bp, current_owner, iterations, keystore, share_dir
 
 
 @bp.get("/account")
 def account():
-    """Password change and erasure forms."""
-    return render_template("account.html")
+    """Key pair details, password change and erasure forms."""
+    key = keypairs.key_info(db.get(), g.user_id)
+    return render_template("account.html", key=key)
 
 
 @bp.post("/account/password")
@@ -44,6 +45,7 @@ def erase():
     if accounts.login(db.get(), creds, iterations()) is None:
         flash("Wrong password, so we haven't deleted anything.", "danger")
         return redirect(url_for("web.account"))
+    share_snapshot.erase_user_shares(db.get(), g.user_id, share_dir())
     documents.erase_user(current_owner())
     keystore().close_user(g.user_id)
     session.clear()
