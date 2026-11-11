@@ -8,8 +8,9 @@
     python demo/seed.py
 
 Logins: emp-0001 and hr-0001, both with the password onboarding-2026.
-Log in as emp-0001 and open Sharing to approve hr-0001's request. All
-data is fictitious.
+Log in as emp-0001, sign employment_contract.pdf on the Documents page,
+then approve hr-0001's request on the Sharing page. All data is
+fictitious.
 """
 
 import sys
@@ -18,6 +19,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 import fake_documents  # noqa: E402
+import fake_pdf  # noqa: E402
 
 from hrvault import accounts, create_app, db, documents  # noqa: E402
 from hrvault import keypairs, personal, sharing  # noqa: E402
@@ -50,12 +52,14 @@ PERSONAL_DATA = {
 
 
 def demo_uploads() -> list[documents.Upload]:
-    """The KTP scan, the contract and, if ffmpeg exists, the video."""
+    """KTP scan, contract (Word and PDF) and, with ffmpeg, the video."""
     uploads = [
         documents.Upload("id_scan", "ktp_scan.png", "image/png",
                          fake_documents.ktp_scan()),
         documents.Upload("office", "employment_contract.docx", DOCX_MIME,
                          fake_documents.contract_docx()),
+        documents.Upload("office", "employment_contract.pdf",
+                         "application/pdf", fake_pdf.contract_pdf()),
     ]
     video = fake_documents.interview_video()
     if video:
@@ -65,7 +69,7 @@ def demo_uploads() -> list[documents.Upload]:
 
 
 def create_demo_owner(app, creds: accounts.Credentials) -> Owner | None:
-    """Register and log in a demo user with a key pair; None if present."""
+    """Register and log in a demo user; None if they already exist."""
     conn = db.get()
     iterations = app.config["PBKDF2_ITERATIONS"]
     if conn.execute("SELECT 1 FROM users WHERE username = ?",
@@ -73,9 +77,7 @@ def create_demo_owner(app, creds: accounts.Credentials) -> Owner | None:
         return None
     accounts.register(conn, creds, iterations)
     user_id, keys = accounts.login(conn, creds, iterations)
-    owner = Owner(conn, app.config["BLOB_DIR"], user_id, keys)
-    keypairs.ensure_key_pair(owner, app.config["RSA_KEY_BITS"])
-    return owner
+    return Owner(conn, app.config["BLOB_DIR"], user_id, keys)
 
 
 def seed_employee(owner: Owner) -> None:
@@ -98,9 +100,11 @@ def main():
             return
         seed_employee(owner)
         hr_officer = create_demo_owner(app, HR)
+        keypairs.ensure_key_pair(hr_officer, app.config["RSA_KEY_BITS"])
         sharing.request_access(db.get(), hr_officer.user_id, DEMO.username)
-    print(f"\nDemo ready. Log in as {DEMO.username} / {DEMO.password} and "
-          f"approve {HR.username}'s request on the Sharing page.")
+    print(f"\nDemo ready. Log in as {DEMO.username} / {DEMO.password}, "
+          "sign employment_contract.pdf on the Documents page and approve "
+          f"{HR.username}'s request on the Sharing page.")
 
 
 if __name__ == "__main__":
