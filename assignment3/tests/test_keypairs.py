@@ -1,46 +1,57 @@
 # PROJECT, 2026
 # info_security
 # File description:
-# Key pair tests: created at first login, private half sealed at rest.
+# Key pair tests: generate on request, sealed at rest, certificate.
 
-"""Key pair tests: created at first login, private half sealed at rest."""
+"""Key pair tests: generate on request, sealed at rest, certificate."""
 
 import sqlite3
 
 import pytest
 from Crypto.PublicKey import RSA
 
+from hrvault.pdfsign import certificate_info
 from tests.helpers import post_form
 
 
 def _key_row(app):
-    """(public_key, private_key) stored for the first user."""
+    """The stored key row of the first user, or None."""
     conn = sqlite3.connect(app.config["DB_PATH"])
-    return conn.execute(
-        "SELECT public_key, private_key FROM user_keys").fetchone()
+    conn.row_factory = sqlite3.Row
+    return conn.execute("SELECT * FROM user_keys").fetchone()
 
 
-def test_key_pair_is_created_on_first_login(app, client):
-    """Logging in for the first time stores exactly one key pair."""
-    public, sealed = _key_row(app)
-    assert RSA.import_key(public).size_in_bits() == 1024
-    assert not RSA.import_key(public).has_private()
-    page = client.get("/account").get_data(as_text=True)
-    assert "Your RSA key pair" in page
+def test_no_key_until_the_user_asks(app, client):
+    """Logging in does not create keys; the Keys page offers both ways."""
+    assert _key_row(app) is None
+    page = client.get("/keys").get_data(as_text=True)
+    assert "Generate a key pair" in page and "Import your own key" in page
 
 
-def test_private_key_is_not_stored_in_clear(app, client):
-    """The stored private key is an envelope, not a loadable key."""
-    sealed = _key_row(app)[1]
-    assert sealed[:2] == bytes([1, 1])
+def test_generate_creates_one_sealed_key_pair(app, client):
+    """Generating stores a public key and a sealed private key, once."""
+    post_form(client, "/keys/generate", {})
+    row = _key_row(app)
+    assert not RSA.import_key(row["public_key"]).has_private()
+    assert row["private_key"][:2] == bytes([1, 1])
     with pytest.raises(ValueError):
-        RSA.import_key(sealed)
+        RSA.import_key(row["private_key"])
+    resp = post_form(client, "/keys/generate", {}, follow=True)
+    assert b"You already have a key pair" in resp.data
 
 
-def test_second_login_keeps_the_same_key(app, client):
-    """A key pair is generated once, not at every login."""
-    first = _key_row(app)[0]
-    post_form(client, "/logout", {})
-    post_form(client, "/login", {"username": "emp-001",
-                                 "password": "onboarding-2026"})
-    assert _key_row(app)[0] == first
+def test_certificate_names_the_user(app, client):
+    """The downloadable certificate is for emp-001 and this public key."""
+    post_form(client, "/keys/generate", {})
+    resp = client.get("/keys/certificate.cer")
+    cert = certificate_info.parse(resp.data)
+    assert cert.subject == "emp-001"
+    assert cert.public_key == _key_row(app)["public_key"]
+    assert certificate_info.is_self_signed_by_its_key(cert)
+    assert b"BEGIN PUBLIC KEY" in client.get("/keys/public.pem").data
+
+
+def test_downloads_need_a_key_pair(client):
+    """Without a key pair there is nothing to download."""
+    assert client.get("/keys/certificate.cer").status_code == 404
+    assert client.get("/keys/public.pem").status_code == 404
