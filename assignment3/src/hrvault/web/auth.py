@@ -1,0 +1,90 @@
+# PROJECT, 2026
+# info_security
+# File description:
+# Registration, login and logout views.
+
+"""Registration, login and logout views."""
+
+from flask import (flash, g, redirect, render_template, request, session,
+                   url_for)
+
+from .. import accounts, db, keypairs
+from .blueprint import bp, iterations, keystore, owner_of, rsa_bits
+
+
+def _form_credentials() -> accounts.Credentials:
+    """Employee number and password from the submitted form."""
+    return accounts.Credentials(request.form.get("username", "").strip(),
+                                request.form.get("password", ""))
+
+
+@bp.route("/")
+def index():
+    """Send visitors to their dashboard, or to the login page."""
+    if g.user_id:
+        return redirect(url_for("web.dashboard"))
+    return redirect(url_for("web.login"))
+
+
+def _try_register() -> bool:
+    """Create the account from the form; flash the outcome."""
+    if request.form.get("password") != request.form.get("confirm"):
+        flash("Those two passwords don't match. Try once more?", "danger")
+        return False
+    try:
+        accounts.register(db.get(), _form_credentials(), iterations())
+    except accounts.AccountError as exc:
+        flash(str(exc), "danger")
+        return False
+    flash("You're in! Log in with your new password and let's get your "
+          "file started.", "success")
+    return True
+
+
+@bp.route("/register", methods=["GET", "POST"])
+def register():
+    """Show the registration form and handle its submission."""
+    if request.method == "POST" and _try_register():
+        return redirect(url_for("web.login"))
+    return render_template("register.html")
+
+
+def _open_session(result, username: str):
+    """Open a session, creating the user's RSA key pair on first login.
+
+    The session is cleared first so the logged-in user gets a new
+    session id.
+    """
+    user_id, keys = result
+    created = keypairs.ensure_key_pair(owner_of(user_id, keys), rsa_bits())
+    session.clear()
+    session["token"] = keystore().open_session(user_id, keys)
+    session["username"] = username
+    if created:
+        flash("Welcome! We generated your RSA key pair. Its private half "
+              "is locked with your password.", "info")
+    return redirect(url_for("web.dashboard"))
+
+
+@bp.route("/login", methods=["GET", "POST"])
+def login():
+    """Check credentials, unwrap the vault key and open a session."""
+    if request.method != "POST":
+        return render_template("login.html")
+    creds = _form_credentials()
+    result = accounts.login(db.get(), creds, iterations())
+    if result is None:
+        flash("That employee number and password don't match. Your number "
+              "is on your offer letter.", "danger")
+        return render_template("login.html")
+    return _open_session(result, creds.username)
+
+
+@bp.route("/logout", methods=["POST"])
+def logout():
+    """Drop the session's keys from memory and clear the cookie."""
+    keystore().close_session(session.get("token"))
+    session.clear()
+    flash("See you soon. We've wiped your keys from the server's memory.",
+          "info")
+    return redirect(url_for("web.login"))

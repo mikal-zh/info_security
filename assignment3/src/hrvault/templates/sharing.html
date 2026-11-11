@@ -1,0 +1,194 @@
+{#
+  PROJECT, 2026
+  info_security
+  File description:
+  Sharing page: request access, approve, reject or revoke requests.
+#}
+{% extends "base.html" %}
+{% block title %}Sharing{% endblock %}
+{% block content %}
+{% set field_class = "w-full bg-slate-900/80 border border-slate-700
+  rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none
+  focus:border-sky-500" %}
+{% set card_class = "bg-slate-800/80 border border-slate-700/80
+  rounded-2xl p-6 shadow-xl" %}
+{% set small_button = "inline-flex items-center px-3 py-1.5 rounded-lg
+  text-xs font-semibold" %}
+{% set status_style = {
+  'pending': 'bg-amber-500/15 text-amber-300',
+  'approved': 'bg-emerald-500/15 text-emerald-300',
+  'rejected': 'bg-slate-700 text-slate-300',
+  'revoked': 'bg-rose-500/15 text-rose-300',
+} %}
+<div class="space-y-6">
+
+  <div class="{{ card_class }}">
+    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full
+                bg-indigo-500/10 border border-indigo-500/20 text-indigo-300
+                text-xs font-semibold mb-2">
+      <i class="fa-solid fa-key"></i>
+      <span>RSA-OAEP key transport · AES share copy</span>
+    </div>
+    <h1 class="text-2xl font-bold text-white tracking-tight mb-1">
+      Ask for someone's file
+    </h1>
+    <p class="text-xs text-slate-400 mb-4">
+      The owner decides. If they approve, we re-lock a copy of their file
+      with a fresh key, and seal that key with your public key: only you
+      can open it.
+    </p>
+    <form method="post" action="{{ url_for('web.request_access') }}"
+          class="grid md:grid-cols-[1fr_auto] gap-4 items-end">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div>
+        <label class="block text-xs font-semibold text-slate-400 uppercase
+                      tracking-wider mb-1.5">Employee number</label>
+        <input name="username" required placeholder="emp-0002"
+               class="{{ field_class }}">
+      </div>
+      <button class="inline-flex items-center justify-center px-5 py-2.5
+                     rounded-xl bg-gradient-to-r from-sky-500 to-blue-600
+                     hover:from-sky-400 hover:to-blue-500 text-white text-sm
+                     font-semibold shadow-lg shadow-sky-500/20">
+        <i class="fa-solid fa-paper-plane mr-2"></i> Send request
+      </button>
+    </form>
+    {% if key %}
+    <p class="text-[11px] text-slate-500 mt-4">
+      Your public key ({{ key.bits }}-bit RSA) fingerprint:
+      <span class="font-mono text-slate-300">{{ key.fingerprint }}</span>
+    </p>
+    {% endif %}
+  </div>
+
+  <div class="{{ card_class }}">
+    <h2 class="text-lg font-bold text-white tracking-tight">
+      Requests for your file
+    </h2>
+    <p class="text-xs text-slate-400 mb-4">
+      Check the fingerprint with your colleague before you approve: it
+      proves the key really is theirs.
+    </p>
+    {% if incoming %}
+    <div class="overflow-x-auto">
+      <table class="w-full text-left text-sm">
+        <thead>
+          <tr class="border-b border-slate-700/80 text-xs font-semibold
+                     uppercase text-slate-400">
+            <th class="py-3 px-4">From</th>
+            <th class="py-3 px-4">Their key fingerprint</th>
+            <th class="py-3 px-4">Asked on</th>
+            <th class="py-3 px-4">Status</th>
+            <th class="py-3 px-4 text-right">Decision</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in incoming %}
+          <tr class="border-b border-slate-700/40">
+            <td class="py-3 px-4 font-mono text-sky-300">{{ item.other }}</td>
+            <td class="py-3 px-4 font-mono text-[11px] text-slate-400">
+              {{ item.fingerprint or 'no key yet' }}
+            </td>
+            <td class="py-3 px-4 text-xs text-slate-400">
+              {{ item.created_at }}
+            </td>
+            <td class="py-3 px-4">
+              <span class="px-2 py-0.5 rounded text-xs
+                           {{ status_style[item.status] }}">
+                {{ item.status }}
+              </span>
+            </td>
+            <td class="py-3 px-4 text-right whitespace-nowrap">
+              {% if item.status == 'pending' %}
+              <form method="post" class="inline"
+                    action="{{ url_for('web.approve',
+                                       request_id=item.id) }}">
+                <input type="hidden" name="csrf_token"
+                       value="{{ csrf_token }}">
+                <button class="{{ small_button }} bg-emerald-600
+                               hover:bg-emerald-500 text-white">
+                  <i class="fa-solid fa-check mr-1"></i> Approve
+                </button>
+              </form>
+              <form method="post" class="inline"
+                    action="{{ url_for('web.decide', request_id=item.id,
+                                       action='reject') }}">
+                <input type="hidden" name="csrf_token"
+                       value="{{ csrf_token }}">
+                <button class="{{ small_button }} bg-slate-700
+                               hover:bg-slate-600 text-slate-200">
+                  <i class="fa-solid fa-xmark mr-1"></i> Decline
+                </button>
+              </form>
+              {% elif item.status == 'approved' %}
+              <form method="post" class="inline"
+                    action="{{ url_for('web.decide', request_id=item.id,
+                                       action='revoke') }}">
+                <input type="hidden" name="csrf_token"
+                       value="{{ csrf_token }}">
+                <button class="{{ small_button }} bg-rose-600
+                               hover:bg-rose-500 text-white">
+                  <i class="fa-solid fa-ban mr-1"></i> Revoke
+                </button>
+              </form>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="text-sm text-slate-500">Nobody has asked for your file.</p>
+    {% endif %}
+  </div>
+
+  <div class="{{ card_class }}">
+    <h2 class="text-lg font-bold text-white tracking-tight mb-4">
+      Your requests
+    </h2>
+    {% if outgoing %}
+    <div class="overflow-x-auto">
+      <table class="w-full text-left text-sm">
+        <thead>
+          <tr class="border-b border-slate-700/80 text-xs font-semibold
+                     uppercase text-slate-400">
+            <th class="py-3 px-4">File of</th>
+            <th class="py-3 px-4">Asked on</th>
+            <th class="py-3 px-4">Status</th>
+            <th class="py-3 px-4 text-right">Open</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in outgoing %}
+          <tr class="border-b border-slate-700/40">
+            <td class="py-3 px-4 font-mono text-sky-300">{{ item.other }}</td>
+            <td class="py-3 px-4 text-xs text-slate-400">
+              {{ item.created_at }}
+            </td>
+            <td class="py-3 px-4">
+              <span class="px-2 py-0.5 rounded text-xs
+                           {{ status_style[item.status] }}">
+                {{ item.status }}
+              </span>
+            </td>
+            <td class="py-3 px-4 text-right">
+              {% if item.status == 'approved' %}
+              <a href="{{ url_for('web.shared_file', request_id=item.id) }}"
+                 class="{{ small_button }} bg-sky-600 hover:bg-sky-500
+                        text-white">
+                <i class="fa-solid fa-folder-open mr-1"></i> Open file
+              </a>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="text-sm text-slate-500">You haven't asked for any file.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

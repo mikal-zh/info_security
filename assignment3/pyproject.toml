@@ -1,0 +1,13 @@
+# PROJECT, 2026
+# info_security
+# File description:
+# Project metadata and pytest configuration (src layout).
+
+[project]
+name = "hrvault"
+version = "1.0.0"
+requires-python = ">=3.10"
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
