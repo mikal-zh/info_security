@@ -1,0 +1,9 @@
+# PROJECT, 2026
+# info_security
+# File description:
+# Python dependencies.
+
+flask>=3.0
+pycryptodome>=3.20
+pillow>=10.0
+pytest>=8.0
