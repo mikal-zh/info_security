@@ -5,8 +5,9 @@
 
 """Web layer: importing the view modules registers them on the blueprint."""
 
-from . import account, auth, documents, hooks, personal, sharing
+from . import (account, auth, documents, hooks, keys, personal, sharing,
+               signatures)
 from .blueprint import bp
 
-__all__ = ["bp", "account", "auth", "documents", "hooks", "personal",
-           "sharing"]
+__all__ = ["bp", "account", "auth", "documents", "hooks", "keys",
+           "personal", "sharing", "signatures"]
