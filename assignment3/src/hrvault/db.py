@@ -7,8 +7,9 @@
 
 Only ciphertext and non-personal bookkeeping are stored in clear. The
 employee number is kept in clear because it is needed to log in.
-Public RSA keys are public by definition and are also kept in clear;
-private RSA keys are stored sealed with their owner's AES subkey.
+Public RSA keys and their certificates are public by definition and are
+also kept in clear; private RSA keys are stored sealed with their
+owner's AES subkey.
 """
 
 import sqlite3
@@ -51,6 +52,8 @@ CREATE TABLE IF NOT EXISTS user_keys (
     user_id     INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
     public_key  BLOB NOT NULL,
     private_key BLOB NOT NULL,
+    certificate BLOB NOT NULL,
+    origin      TEXT NOT NULL DEFAULT 'generated',
     created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
