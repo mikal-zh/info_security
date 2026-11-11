@@ -1,0 +1,108 @@
+{#
+  PROJECT, 2026
+  info_security
+  File description:
+  Signature report of a PDF, and the form to check any PDF.
+#}
+{% extends "base.html" %}
+{% block title %}PDF signatures{% endblock %}
+{% block content %}
+{% set card_class = "bg-slate-800/80 border border-slate-700/80
+  rounded-2xl p-6 shadow-xl" %}
+{% macro row(ok, good, bad) %}
+<li class="flex items-start gap-2">
+  {% if ok %}
+  <i class="fa-solid fa-circle-check text-emerald-400 mt-0.5"></i>
+  <span>{{ good }}</span>
+  {% else %}
+  <i class="fa-solid fa-circle-xmark text-rose-400 mt-0.5"></i>
+  <span>{{ bad }}</span>
+  {% endif %}
+</li>
+{% endmacro %}
+<div class="space-y-6">
+  <div class="{{ card_class }}">
+    <h1 class="text-2xl font-bold text-white tracking-tight">
+      Check a PDF's signatures
+    </h1>
+    <p class="text-xs text-slate-400 mt-1 mb-4">
+      Any PDF works, wherever it was signed. We recompute its SHA-256,
+      check the RSA signature and tell you whose registered key made it.
+    </p>
+    <form method="post" action="{{ url_for('web.verify_any_pdf') }}"
+          enctype="multipart/form-data"
+          class="grid md:grid-cols-[1fr_auto] gap-4 items-end">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="file" name="file" accept=".pdf" required
+             class="w-full text-sm text-slate-300 file:mr-3 file:py-2
+                    file:px-4 file:rounded-lg file:border-0
+                    file:bg-slate-700 file:text-slate-200 bg-slate-900/80
+                    border border-slate-700 rounded-xl p-1">
+      <button class="inline-flex items-center px-5 py-2.5 rounded-xl
+                     bg-gradient-to-r from-sky-500 to-blue-600 text-white
+                     text-sm font-semibold">
+        <i class="fa-solid fa-magnifying-glass mr-2"></i> Check
+      </button>
+    </form>
+  </div>
+
+  {% if checks is not none %}
+  <div class="{{ card_class }}">
+    <h2 class="text-lg font-bold text-white tracking-tight mb-4">
+      {{ filename }}
+    </h2>
+    {% if not checks %}
+    <p class="text-sm text-slate-400">This PDF carries no signature.</p>
+    {% endif %}
+    <div class="space-y-4">
+      {% for check in checks %}
+      <div class="rounded-xl border p-4
+                  {{ 'border-emerald-500/40 bg-emerald-950/30'
+                     if check.valid
+                     else 'border-rose-500/40 bg-rose-950/30' }}">
+        <div class="flex items-center justify-between mb-3">
+          <span class="font-semibold text-white">
+            {{ check.field_name }}
+            {% if check.signer %}
+            by <span class="font-mono text-sky-300">{{ check.signer }}</span>
+            {% endif %}
+          </span>
+          <span class="text-xs font-bold uppercase
+                       {{ 'text-emerald-300' if check.valid
+                          else 'text-rose-300' }}">
+            {{ 'valid' if check.valid else 'not valid' }}
+          </span>
+        </div>
+        <ul class="space-y-1.5 text-sm text-slate-200">
+          {{ row(check.intact, 'The signed content has not changed.',
+                 'The signed content was changed after signing.') }}
+          {{ row(check.authentic,
+                 'The RSA signature matches the certificate\'s key.',
+                 'The RSA signature does not match.') }}
+          {{ row(check.registered_user,
+                 'This key belongs to ' ~ check.registered_user
+                 ~ ' in this vault.',
+                 'This key is not registered in this vault.') }}
+          {{ row(check.certificate_ok,
+                 'The certificate is well formed and was valid at signing.',
+                 'The certificate is not valid for this signature.') }}
+          {{ row(check.whole_file,
+                 'The signature covers the whole file.',
+                 'Content was added after this signature (for example a '
+                 ~ 'later signature).') }}
+        </ul>
+        {% if check.signed_at %}
+        <p class="text-xs text-slate-400 mt-3">
+          Signed {{ check.signed_at.strftime('%d %b %Y, %H:%M UTC') }}
+        </p>
+        {% endif %}
+        {% for problem in check.problems %}
+        <p class="text-xs text-rose-300 mt-1">{{ problem }}</p>
+        {% endfor %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
