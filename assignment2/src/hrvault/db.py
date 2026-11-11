@@ -7,6 +7,8 @@
 
 Only ciphertext and non-personal bookkeeping are stored in clear. The
 employee number is kept in clear because it is needed to log in.
+Public RSA keys are public by definition and are also kept in clear;
+private RSA keys are stored sealed with their owner's AES subkey.
 """
 
 import sqlite3
@@ -43,6 +45,40 @@ CREATE TABLE IF NOT EXISTS documents (
     meta_des    BLOB NOT NULL,
     meta_rc4    BLOB NOT NULL,
     created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS user_keys (
+    user_id     INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    public_key  BLOB NOT NULL,
+    private_key BLOB NOT NULL,
+    created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS access_requests (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    requester_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    owner_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    status       TEXT NOT NULL DEFAULT 'pending',
+    wrapped_key  BLOB,
+    created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    decided_at   TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS shared_fields (
+    request_id INTEGER NOT NULL
+               REFERENCES access_requests(id) ON DELETE CASCADE,
+    field      TEXT NOT NULL,
+    sealed     BLOB NOT NULL,
+    PRIMARY KEY (request_id, field)
+);
+
+CREATE TABLE IF NOT EXISTS shared_documents (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    request_id INTEGER NOT NULL
+               REFERENCES access_requests(id) ON DELETE CASCADE,
+    uuid       TEXT UNIQUE NOT NULL,
+    category   TEXT NOT NULL,
+    meta       BLOB NOT NULL
 );
 """
 

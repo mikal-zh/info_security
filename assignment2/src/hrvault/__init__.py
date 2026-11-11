@@ -15,14 +15,16 @@ from .keystore import KeyStore
 
 
 def create_app(overrides: dict | None = None) -> Flask:
-    """Build the Flask app, its database, blob folder and key store."""
+    """Build the Flask app, its database, data folders and key store."""
     app = Flask(__name__)
     app.config.from_object(Config)
     app.config.update(overrides or {})
     data_dir = Path(app.config["DATA_DIR"])
     app.config.setdefault("DB_PATH", data_dir / "hrvault.db")
     app.config.setdefault("BLOB_DIR", data_dir / "blobs")
+    app.config.setdefault("SHARE_DIR", data_dir / "shares")
     Path(app.config["BLOB_DIR"]).mkdir(parents=True, exist_ok=True)
+    Path(app.config["SHARE_DIR"]).mkdir(parents=True, exist_ok=True)
     db.init(app.config["DB_PATH"])
     app.extensions["keystore"] = KeyStore(app.config["SESSION_IDLE_SECONDS"])
     app.teardown_appcontext(db.close)

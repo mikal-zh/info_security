@@ -22,6 +22,8 @@ class Config:
 
     SESSION_IDLE_SECONDS = 30 * 60
 
+    RSA_KEY_BITS = int(os.environ.get("HRVAULT_RSA_KEY_BITS", 2048))
+
     MAX_CONTENT_LENGTH = 100 * 1024 * 1024
 
     SESSION_COOKIE_HTTPONLY = True
