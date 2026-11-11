@@ -120,7 +120,16 @@
                   <i class="fa-solid {{ icon }} text-sm"></i>
                 </div>
                 <div>
-                  <div class="font-medium text-white">{{ doc.filename }}</div>
+                  <div class="font-medium text-white">
+                    {{ doc.filename }}
+                    {% if doc.signed %}
+                    <span class="ml-1 px-1.5 py-0.5 rounded text-[10px]
+                                 font-semibold bg-emerald-500/15
+                                 text-emerald-300">
+                      <i class="fa-solid fa-signature mr-0.5"></i> signed
+                    </span>
+                    {% endif %}
+                  </div>
                   <div class="text-[11px] text-slate-500">
                     {{ doc.created_at }}
                   </div>
@@ -155,6 +164,25 @@
                         {{ icon_button }} hover:text-sky-300">
                 <i class="fa-solid fa-eye"></i>
               </a>
+              {% if doc.mime == 'application/pdf' %}
+              <form method="post" class="inline"
+                    action="{{ url_for('web.sign_document',
+                                       doc_id=doc.id) }}">
+                <input type="hidden" name="csrf_token"
+                       value="{{ csrf_token }}">
+                <button title="Sign with my private key"
+                        class="{{ icon_button }} hover:text-indigo-300">
+                  <i class="fa-solid fa-file-signature"></i>
+                </button>
+              </form>
+              <a href="{{ url_for('web.document_signatures',
+                                  doc_id=doc.id) }}"
+                 title="Check the PDF's signatures"
+                 class="inline-flex items-center justify-center
+                        {{ icon_button }} hover:text-indigo-300">
+                <i class="fa-solid fa-stamp"></i>
+              </a>
+              {% endif %}
               <form method="post" class="inline"
                     action="{{ url_for('web.verify', doc_id=doc.id) }}">
                 <input type="hidden" name="csrf_token"
