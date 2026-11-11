@@ -22,6 +22,22 @@
     </p>
   </div>
 
+  {% if key %}
+  <div class="rounded-2xl bg-slate-800/80 border border-slate-700/80 p-6
+              shadow-xl">
+    <h2 class="text-lg font-bold text-white">Your RSA key pair</h2>
+    <p class="text-xs text-slate-400 mt-1">
+      {{ key.bits }}-bit RSA, created {{ key.created_at }}. Colleagues use
+      the public half to share files with you; the private half is locked
+      with your password and never leaves the server's memory unsealed.
+    </p>
+    <p class="mt-3 text-sm">
+      Fingerprint:
+      <span class="font-mono text-sky-300">{{ key.fingerprint }}</span>
+    </p>
+  </div>
+  {% endif %}
+
   <div class="grid md:grid-cols-2 gap-6">
     <form method="post" action="{{ url_for('web.change_password') }}"
           class="{{ card_class }} border border-slate-700/80">
